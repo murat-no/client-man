@@ -36,6 +36,7 @@ type AppInfo struct {
 	AppServerPass string   `json:"app_server_pass"`
 	AppURI        string   `json:"app_uri"`
 	AppUsers      []string `json:"app_users"`
+	SSHParams     string   `json:"ssh_params"`
 	Notes         string   `json:"not"`
 }
 

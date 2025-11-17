@@ -478,15 +478,18 @@ func (s *AppState) openSSHShell(app AppInfo) {
 		return
 	}
 
-	// SSH komutunu oluştur
+	// SSH komutunu oluştur - SSHParams varsa ekle
 	sshCmd := fmt.Sprintf("ssh %s@%s", app.AppServerUser, app.AppServerIP)
+	if strings.TrimSpace(app.SSHParams) != "" {
+		sshCmd = fmt.Sprintf("ssh %s %s@%s", app.SSHParams, app.AppServerUser, app.AppServerIP)
+	}
 
 	// Platform'a göre terminal aç
 	if runtime.GOOS == "windows" {
 		// Windows: cmd ile SSH aç, yeni window'da, exit yazınca window kapatılır
 		// "start" komutu yeni window açar
 		// "/c" flag'ı: komut bitince window'u kapat
-		psCmd := fmt.Sprintf("start cmd /c ssh %s@%s", app.AppServerUser, app.AppServerIP)
+		psCmd := fmt.Sprintf("start cmd /c %s", sshCmd)
 
 		cmd := exec.Command("cmd", "/c", psCmd)
 		if err := cmd.Start(); err != nil {

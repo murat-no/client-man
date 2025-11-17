@@ -458,18 +458,20 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 		appsContainer := container.NewVBox()
 		appTypeOptions := []string{"DEV", "TEST", "PREP", "PROD"}
 		for appIdx, app := range client.Apps {
+			idx := appIdx // Capture the index value to avoid closure issues
 			appForm := widget.NewForm(
-				widget.NewFormItem("Tip", s.createEditableSelect(fallback(app.Type), appTypeOptions, index, func(c *Client, v string) { c.Apps[appIdx].Type = v })),
-				widget.NewFormItem("İsim", s.createEditableLabel(fallback(app.Name), false, index, func(c *Client, v string) { c.Apps[appIdx].Name = v })),
-				widget.NewFormItem("User", s.createEditableLabel(fallback(app.User), false, index, func(c *Client, v string) { c.Apps[appIdx].User = v })),
-				widget.NewFormItem("Pass", s.createEditablePasswordLabel(fallback(app.Password), index, func(c *Client, v string) { c.Apps[appIdx].Password = v })),
-				widget.NewFormItem("DB IP", s.createEditableLabel(fallback(app.DBServerIP), false, index, func(c *Client, v string) { c.Apps[appIdx].DBServerIP = v })),
-				widget.NewFormItem("TNS", s.createEditableLabel(fallback(app.TNS), false, index, func(c *Client, v string) { c.Apps[appIdx].TNS = v })),
-				widget.NewFormItem("App IP", s.createEditableLabel(fallback(app.AppServerIP), false, index, func(c *Client, v string) { c.Apps[appIdx].AppServerIP = v })),
-				widget.NewFormItem("App URI", s.createClickableURLLabel(fallback(app.AppServerURI), index, func(c *Client, v string) { c.Apps[appIdx].AppServerURI = v })),
-				widget.NewFormItem("App User", s.createEditableLabel(fallback(app.AppServerUser), false, index, func(c *Client, v string) { c.Apps[appIdx].AppServerUser = v })),
-				widget.NewFormItem("App Pass", s.createEditablePasswordLabel(fallback(app.AppServerPass), index, func(c *Client, v string) { c.Apps[appIdx].AppServerPass = v })),
-				widget.NewFormItem("URI", s.createClickableURLLabel(fallback(app.AppURI), index, func(c *Client, v string) { c.Apps[appIdx].AppURI = v })),
+				widget.NewFormItem("Tip", s.createEditableSelect(fallback(app.Type), appTypeOptions, index, func(c *Client, v string) { c.Apps[idx].Type = v })),
+				widget.NewFormItem("İsim", s.createEditableLabel(fallback(app.Name), false, index, func(c *Client, v string) { c.Apps[idx].Name = v })),
+				widget.NewFormItem("User", s.createEditableLabel(fallback(app.User), false, index, func(c *Client, v string) { c.Apps[idx].User = v })),
+				widget.NewFormItem("Pass", s.createEditablePasswordLabel(fallback(app.Password), index, func(c *Client, v string) { c.Apps[idx].Password = v })),
+				widget.NewFormItem("DB IP", s.createEditableLabel(fallback(app.DBServerIP), false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v })),
+				widget.NewFormItem("TNS", s.createEditableLabel(fallback(app.TNS), false, index, func(c *Client, v string) { c.Apps[idx].TNS = v })),
+				widget.NewFormItem("App IP", s.createEditableLabel(fallback(app.AppServerIP), false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v })),
+				widget.NewFormItem("App URI", s.createClickableURLLabel(fallback(app.AppServerURI), index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v })),
+				widget.NewFormItem("App User", s.createEditableLabel(fallback(app.AppServerUser), false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v })),
+				widget.NewFormItem("App Pass", s.createEditablePasswordLabel(fallback(app.AppServerPass), index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v })),
+				widget.NewFormItem("SSH Params", s.createEditableLabel(fallback(app.SSHParams), false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v })),
+				widget.NewFormItem("URI", s.createClickableURLLabel(fallback(app.AppURI), index, func(c *Client, v string) { c.Apps[idx].AppURI = v })),
 			)
 
 			// App Users - Custom Expandable Item
@@ -495,7 +497,7 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 				fyne.NewSize(18, 18),
 				"Sil - Bu ortamı ve tüm verilerini kalıcı olarak sil",
 				func() {
-					s.deleteApp(index, appIdx)
+					s.deleteApp(index, idx)
 				},
 			)
 
@@ -506,7 +508,6 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 			// SSH Shell butonu - IP ve User varsa ekle
 			headerButtons := []fyne.CanvasObject{}
 			if fallback(app.AppServerIP) != "—" && fallback(app.AppServerUser) != "—" {
-				currentAppIdx := appIdx // Closure için sabit al
 				sshBtn := NewIconButtonSimple(
 					theme.ComputerIcon(),
 					"",
@@ -514,8 +515,8 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 					"SSH - Sunucuya SSH bağlantısı aç",
 					func() {
 						// AppIndex'den doğru app'i al
-						if currentAppIdx < len(s.clients[index].Apps) {
-							s.openSSHShell(s.clients[index].Apps[currentAppIdx])
+						if idx < len(s.clients[index].Apps) {
+							s.openSSHShell(s.clients[index].Apps[idx])
 						}
 					},
 				)
@@ -545,7 +546,6 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 			}
 
 			// Expand durumu değiştiğinde kaydet
-			currentAppIdx := appIdx // Closure için
 			originalOnTap := header.onTap
 			header.onTap = func() {
 				if originalOnTap != nil {
@@ -555,7 +555,7 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 				if s.expandedApps[client.Company] == nil {
 					s.expandedApps[client.Company] = make(map[int]bool)
 				}
-				s.expandedApps[client.Company][currentAppIdx] = expandableApp.IsExpanded()
+				s.expandedApps[client.Company][idx] = expandableApp.IsExpanded()
 			}
 
 			// Container'a ekle
