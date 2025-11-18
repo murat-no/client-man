@@ -156,14 +156,12 @@ func (r *customTextBoxRenderer) buildReadOnlyUI() {
 			}
 
 			window.Clipboard().SetContent(r.textBox.text)
-			r.copyButton.icon = r.copiedIcon
-			r.copyButton.Refresh()
+			r.copyButton.SetIcon(r.copiedIcon)
 
 			go func() {
 				time.Sleep(2 * time.Second)
 				fyne.Do(func() {
-					r.copyButton.icon = r.copyIcon
-					r.copyButton.Refresh()
+					r.copyButton.SetIcon(r.copyIcon)
 				})
 			}()
 		},
@@ -252,11 +250,10 @@ func (r *customTextBoxRenderer) updateEyeIcon() {
 		return
 	}
 	if r.textBox.hidden {
-		r.eyeButton.icon = r.eyeIcon
+		r.eyeButton.SetIcon(r.eyeIcon)
 	} else {
-		r.eyeButton.icon = r.hiddenIcon
+		r.eyeButton.SetIcon(r.hiddenIcon)
 	}
-	r.eyeButton.Refresh()
 }
 
 func (r *customTextBoxRenderer) updateVisibility() {

@@ -220,6 +220,12 @@ func (b *IconButton) MouseMoved(e *desktop.MouseEvent) {
 	b.ToolTipWidget.MouseMoved(e)
 }
 
+// SetIcon updates the icon resource and refreshes the widget so UI reflects the change immediately.
+func (b *IconButton) SetIcon(res fyne.Resource) {
+	b.icon = res
+	b.Refresh()
+}
+
 // tappableBackground tıklanabilir şeffaf arka plan (overlay kapatmak için)
 type tappableBackground struct {
 	widget.BaseWidget

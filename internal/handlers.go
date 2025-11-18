@@ -484,6 +484,11 @@ func (s *AppState) openSSHShell(app AppInfo) {
 		sshCmd = fmt.Sprintf("ssh %s %s@%s", app.SSHParams, app.AppServerUser, app.AppServerIP)
 	}
 
+	// Şifreyi önceden panoya kopyala ki kullanıcı her koşulda hazır bulunsun
+	if s.window != nil {
+		s.window.Clipboard().SetContent(app.AppServerPass)
+	}
+
 	// Platform'a göre terminal aç
 	if runtime.GOOS == "windows" {
 		// Windows: cmd ile SSH aç, yeni window'da, exit yazınca window kapatılır
