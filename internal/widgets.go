@@ -88,9 +88,9 @@ type IconButton struct {
 	hovered    bool
 
 	// Internal
-	iconImage *canvas.Image
-	textLabel *widget.Label
-	bg        *canvas.Rectangle
+	icon_widget *widget.Icon
+	textLabel   *widget.Label
+	bg          *canvas.Rectangle
 }
 
 // NewIconButton creates a new icon button with optional text, tooltip and hover callbacks
@@ -122,9 +122,8 @@ func (b *IconButton) CreateRenderer() fyne.WidgetRenderer {
 
 type iconButtonRenderer struct {
 	button  *IconButton
-	content fyne.CanvasObject
 	bg      *canvas.Rectangle
-	iconImg *canvas.Image
+	icon    *widget.Icon
 	textLbl *widget.Label
 }
 
@@ -132,56 +131,47 @@ func (r *iconButtonRenderer) Layout(space fyne.Size) {
 	r.bg.Resize(space)
 	if r.textLbl != nil {
 		// Icon ve text
-		iconSize := fyne.NewSize(16, 16)
-		r.iconImg.Resize(iconSize)
-		r.iconImg.Move(fyne.NewPos(2, (space.Height-16)/2))
+		iconSize := r.button.size
+		r.icon.Resize(iconSize)
+		r.icon.Move(fyne.NewPos(2, (space.Height-iconSize.Height)/2))
 
 		textSize := r.textLbl.MinSize()
 		r.textLbl.Resize(textSize)
-		r.textLbl.Move(fyne.NewPos(20, (space.Height-textSize.Height)/2))
+		r.textLbl.Move(fyne.NewPos(iconSize.Width+4, (space.Height-textSize.Height)/2))
 	} else {
 		// Sadece icon
-		r.iconImg.Resize(fyne.NewSize(16, 16))
-		r.iconImg.Move(fyne.NewPos((space.Width-16)/2, (space.Height-16)/2))
+		iconSize := r.button.size
+		r.icon.Resize(iconSize)
+		r.icon.Move(fyne.NewPos((space.Width-iconSize.Width)/2, (space.Height-iconSize.Height)/2))
 	}
 }
 
 func (r *iconButtonRenderer) MinSize() fyne.Size {
-	// Doğrudan size döndür, button.MinSize() çağırma (infinite recursion)
 	if r.textLbl != nil {
 		textSize := r.textLbl.MinSize()
-		return fyne.NewSize(20+textSize.Width, 20) // icon (16) + padding (4) + text
+		return fyne.NewSize(r.button.size.Width+4+textSize.Width, r.button.size.Height)
 	}
-	return fyne.NewSize(20, 20) // Sadece icon
+	return r.button.size
 }
 
 func (r *iconButtonRenderer) Refresh() {
-	// Icon'u güncelle - yeni image oluştur
-	oldImg := r.iconImg
-	r.iconImg = canvas.NewImageFromResource(r.button.icon)
-	r.iconImg.FillMode = canvas.ImageFillContain
-	r.iconImg.SetMinSize(fyne.NewSize(16, 16))
-
-	// Text'i güncelle
+	r.icon.SetResource(r.button.icon)
 	if r.textLbl != nil {
 		r.textLbl.SetText(r.button.text)
 	}
-
-	// Background rengini güncelle (hover state)
 	if r.button.hovered {
 		r.bg.FillColor = color.NRGBA{R: 200, G: 200, B: 200, A: 50}
 	} else {
 		r.bg.FillColor = color.Transparent
 	}
 	r.bg.Refresh()
-	oldImg.Refresh()
 }
 
 func (r *iconButtonRenderer) Objects() []fyne.CanvasObject {
 	if r.textLbl != nil {
-		return []fyne.CanvasObject{r.bg, r.iconImg, r.textLbl}
+		return []fyne.CanvasObject{r.bg, r.icon, r.textLbl}
 	}
-	return []fyne.CanvasObject{r.bg, r.iconImg}
+	return []fyne.CanvasObject{r.bg, r.icon}
 }
 
 func (r *iconButtonRenderer) Destroy() {}
@@ -190,16 +180,11 @@ func newIconButtonRenderer(b *IconButton) *iconButtonRenderer {
 	r := &iconButtonRenderer{
 		button: b,
 		bg:     canvas.NewRectangle(color.Transparent),
+		icon:   widget.NewIcon(b.icon),
 	}
-
-	r.iconImg = canvas.NewImageFromResource(b.icon)
-	r.iconImg.FillMode = canvas.ImageFillContain
-	r.iconImg.SetMinSize(fyne.NewSize(16, 16))
-
 	if b.text != "" {
 		r.textLbl = widget.NewLabel(b.text)
 	}
-
 	return r
 }
 
@@ -844,7 +829,7 @@ func createPasswordLabelWithCopy(text string, window fyne.Window) fyne.CanvasObj
 		dialog.ShowInformation("Bilgi", "Şifre değiştirildi", window)
 	})
 
-	// Kopyalama butonu - IconButton ile oluştur
+	// Kopyalama butonu
 	copyBtn := NewIconButtonSimple(
 		theme.ContentCopyIcon(),
 		"",
@@ -870,7 +855,8 @@ func createPasswordLabelWithCopy(text string, window fyne.Window) fyne.CanvasObj
 			}
 			editLabel.label.Refresh()
 		},
-		nil, nil,
+		nil,
+		nil,
 	)
 
 	return container.NewBorder(nil, nil, copyBtn, eyeBtn, editLabel)
@@ -923,7 +909,8 @@ func (s *AppState) createEditablePasswordLabel(text string, clientIndex int, upd
 			}
 			editLabel.label.Refresh()
 		},
-		nil, nil,
+		nil,
+		nil,
 	)
 
 	return container.NewBorder(nil, nil, copyBtn, eyeBtn, editLabel)

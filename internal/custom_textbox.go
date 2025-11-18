@@ -5,29 +5,27 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
-// CustomTextBox - ReadOnly/Edit toggle, Copy button, Password support, Multiline support
-// Layout: [text (copy)(eye) ...] - buttons right next to text, ellipsis at the end
+// CustomTextBox wraps a read-only text display with copy and optional password toggle, plus an inline editor.
 type CustomTextBox struct {
 	widget.BaseWidget
+
 	text        string
 	isPassword  bool
 	isMultiLine bool
 	readOnly    bool
 	hidden      bool
-	onSave      func(string)
-	onWindow    func() fyne.Window
 
-	displayLabel  *canvas.Text
+	onSave   func(string)
+	onWindow func() fyne.Window
+
+	displayLabel  *widget.Label
 	editEntry     *widget.Entry
-	container     *fyne.Container
-	isEditing     bool
 	maxDisplayLen int
 }
 
@@ -40,14 +38,13 @@ func NewCustomTextBox(text string, isPassword bool, isMultiLine bool, onSave fun
 		hidden:        isPassword,
 		onSave:        onSave,
 		onWindow:      getWindow,
-		isEditing:     false,
 		maxDisplayLen: 30,
 	}
 
-	ctb.displayLabel = canvas.NewText(ctb.getDisplayText(), theme.ForegroundColor())
-	ctb.displayLabel.TextSize = theme.TextSize()
-
-	ctb.container = container.NewStack(ctb.displayLabel)
+	ctb.displayLabel = widget.NewLabel(ctb.getDisplayText())
+	if isMultiLine {
+		ctb.displayLabel.Wrapping = fyne.TextWrapWord
+	}
 
 	ctb.ExtendBaseWidget(ctb)
 	return ctb
@@ -55,13 +52,23 @@ func NewCustomTextBox(text string, isPassword bool, isMultiLine bool, onSave fun
 
 func (ctb *CustomTextBox) getDisplayText() string {
 	text := ctb.text
-
-	if ctb.isPassword && ctb.hidden {
-		text = strings.Repeat("•", len(text))
+	if !ctb.isMultiLine {
+		text = strings.ReplaceAll(text, "\n", " ")
 	}
 
-	if ctb.readOnly && !ctb.isMultiLine && len(text) > ctb.maxDisplayLen {
-		text = text[:ctb.maxDisplayLen] + "…"
+	if ctb.isPassword && ctb.hidden {
+		runeCount := len([]rune(text))
+		if runeCount == 0 {
+			return ""
+		}
+		return strings.Repeat("•", runeCount)
+	}
+
+	if ctb.readOnly && !ctb.isMultiLine {
+		runes := []rune(text)
+		if len(runes) > ctb.maxDisplayLen {
+			return string(runes[:ctb.maxDisplayLen]) + "…"
+		}
 	}
 
 	return text
@@ -76,314 +83,223 @@ func (ctb *CustomTextBox) DoubleTapped(_ *fyne.PointEvent) {
 		if ctb.editEntry != nil {
 			if canvas := fyne.CurrentApp().Driver().CanvasForObject(ctb.editEntry); canvas != nil {
 				canvas.Focus(ctb.editEntry)
-				selectAll := &fyne.ShortcutSelectAll{}
-				ctb.editEntry.TypedShortcut(selectAll)
 			}
+			shortcut := &fyne.ShortcutSelectAll{}
+			ctb.editEntry.TypedShortcut(shortcut)
 		}
 		return
 	}
 
 	ctb.readOnly = false
-	ctb.isEditing = true
-
-	// BaseWidget.Refresh() çağır ki Fyne canvas'ı invalidate etsin
+	ctb.hidden = false
+	if ctb.editEntry != nil {
+		ctb.editEntry.SetText(ctb.text)
+	}
 	ctb.BaseWidget.Refresh()
 
-	// Canvas'ı manuel olarak refresh et
-	if canvas := fyne.CurrentApp().Driver().CanvasForObject(ctb); canvas != nil {
-		canvas.Refresh(ctb)
-	}
-
-	if ctb.editEntry != nil {
-		if canvas := fyne.CurrentApp().Driver().CanvasForObject(ctb.editEntry); canvas != nil {
-			canvas.Focus(ctb.editEntry)
-			selectAll := &fyne.ShortcutSelectAll{}
-			ctb.editEntry.TypedShortcut(selectAll)
+	fyne.Do(func() {
+		if ctb.editEntry != nil {
+			if canvas := fyne.CurrentApp().Driver().CanvasForObject(ctb.editEntry); canvas != nil {
+				canvas.Focus(ctb.editEntry)
+				shortcut := &fyne.ShortcutSelectAll{}
+				ctb.editEntry.TypedShortcut(shortcut)
+			}
 		}
-	}
+	})
 }
 
 func (ctb *CustomTextBox) Tapped(_ *fyne.PointEvent) {}
 
-// readOnlyTextBoxContainer - özel layout container
-type readOnlyTextBoxContainer struct {
-	widget.BaseWidget
-	textBox   *CustomTextBox
-	textLabel *canvas.Text
-	buttons   fyne.CanvasObject
-}
-
-func newReadOnlyTextBoxContainer(textBox *CustomTextBox, buttons fyne.CanvasObject) *readOnlyTextBoxContainer {
-	c := &readOnlyTextBoxContainer{
-		textBox:   textBox,
-		textLabel: textBox.displayLabel,
-		buttons:   buttons,
-	}
-	c.ExtendBaseWidget(c)
-	return c
-}
-
-func (c *readOnlyTextBoxContainer) MinSize() fyne.Size {
-	textSize := c.textLabel.MinSize()
-	buttonsSize := c.buttons.MinSize()
-
-	// Height'ı button ve text'in max'ı yap
-	height := textSize.Height
-	if buttonsSize.Height > height {
-		height = buttonsSize.Height
-	}
-
-	return fyne.NewSize(textSize.Width+buttonsSize.Width+10, height+4)
-}
-
-func (c *readOnlyTextBoxContainer) CreateRenderer() fyne.WidgetRenderer {
-	return &readOnlyTextBoxRenderer{
-		container: c,
-	}
-}
-
-type readOnlyTextBoxRenderer struct {
-	container *readOnlyTextBoxContainer
-}
-
-func (r *readOnlyTextBoxRenderer) Layout(space fyne.Size) {
-	buttonsSize := r.container.buttons.MinSize()
-	availableWidth := space.Width - buttonsSize.Width - 5
-
-	if availableWidth < 50 {
-		availableWidth = 50
-	}
-
-	r.container.textLabel.Text = r.container.textBox.getDisplayText()
-	r.container.textLabel.TextSize = theme.TextSize()
-
-	textSize := r.container.textLabel.MinSize()
-	// Bottom align - 5px yukarı (aşağıdan 5px az)
-	textY := space.Height - textSize.Height + 5
-	if textY < 0 {
-		textY = 0
-	}
-
-	r.container.textLabel.Resize(fyne.NewSize(availableWidth, textSize.Height))
-	r.container.textLabel.Move(fyne.NewPos(0, textY))
-
-	// Buttons da bottom align - 5px yukarı
-	buttonsY := space.Height - buttonsSize.Height + 5
-	if buttonsY < 0 {
-		buttonsY = 0
-	}
-	r.container.buttons.Resize(buttonsSize)
-	r.container.buttons.Move(fyne.NewPos(availableWidth+5, buttonsY))
-}
-
-func (r *readOnlyTextBoxRenderer) MinSize() fyne.Size {
-	return r.container.MinSize()
-}
-
-func (r *readOnlyTextBoxRenderer) Objects() []fyne.CanvasObject {
-	return []fyne.CanvasObject{r.container.textLabel, r.container.buttons}
-}
-
-func (r *readOnlyTextBoxRenderer) Refresh() {
-	r.container.textLabel.Text = r.container.textBox.getDisplayText()
-	r.container.textLabel.Refresh()
-	r.container.buttons.Refresh()
-}
-
-func (r *readOnlyTextBoxRenderer) Destroy() {}
-
 type customTextBoxRenderer struct {
-	textBox     *CustomTextBox
-	readOnlyUI  *readOnlyTextBoxContainer
-	editUI      *fyne.Container
-	currentUI   fyne.CanvasObject
-	initialized bool
+	textBox *CustomTextBox
+
+	readOnlyContainer *fyne.Container
+	editContainer     *fyne.Container
+
+	copyButton *IconButton
+	eyeButton  *IconButton
+	copyIcon   fyne.Resource
+	copiedIcon fyne.Resource
+	eyeIcon    fyne.Resource
+	hiddenIcon fyne.Resource
+	buttonSize fyne.Size
 }
 
 func newCustomTextBoxRenderer(textBox *CustomTextBox) *customTextBoxRenderer {
 	r := &customTextBoxRenderer{
-		textBox:     textBox,
-		initialized: false,
+		textBox:    textBox,
+		copyIcon:   loadIconResource("copy", theme.ContentCopyIcon()),
+		copiedIcon: loadIconResource("check", theme.ConfirmIcon()),
+		eyeIcon:    loadIconResource("eye", theme.VisibilityIcon()),
+		hiddenIcon: loadIconResource("hidden", theme.VisibilityOffIcon()),
+		buttonSize: fyne.NewSize(18, 18),
 	}
-	r.initializeUIs()
+
+	r.buildReadOnlyUI()
+	r.buildEditUI()
+	r.updateVisibility()
 	return r
 }
 
-func (r *customTextBoxRenderer) initializeUIs() {
-	if r.initialized {
-		return
-	}
+func (r *customTextBoxRenderer) buildReadOnlyUI() {
+	r.textBox.displayLabel.SetText(r.textBox.getDisplayText())
 
-	// ReadOnly UI
-	var copyBtn *IconButton
-	copyBtn = NewIconButton(
-		theme.ContentCopyIcon(),
+	r.copyButton = NewIconButtonSimple(
+		r.copyIcon,
 		"",
-		fyne.NewSize(12, 12),
-		"Kopyala",
+		r.buttonSize,
+		"Panoya kopyala",
 		func() {
 			window := r.textBox.onWindow()
-			if window != nil {
-				window.Clipboard().SetContent(r.textBox.text)
-
-				// Button'ı "Copied" text'i ile göster
-				originalText := copyBtn.text
-				copyBtn.text = "✓"
-				copyBtn.icon = theme.ConfirmIcon()
-
-				// Widget'i refresh et
-				fyne.Do(func() {
-					copyBtn.BaseWidget.Refresh()
-				})
-
-				// 2 saniye sonra geri dön
-				go func() {
-					time.Sleep(2 * time.Second)
-					fyne.Do(func() {
-						copyBtn.text = originalText
-						copyBtn.icon = theme.ContentCopyIcon()
-						copyBtn.BaseWidget.Refresh()
-					})
-				}()
+			if window == nil {
+				return
 			}
+
+			window.Clipboard().SetContent(r.textBox.text)
+			r.copyButton.icon = r.copiedIcon
+			r.copyButton.Refresh()
+
+			go func() {
+				time.Sleep(2 * time.Second)
+				fyne.Do(func() {
+					r.copyButton.icon = r.copyIcon
+					r.copyButton.Refresh()
+				})
+			}()
 		},
-		nil, nil,
 	)
 
-	var eyeBtn *IconButton
+	buttonObjects := []fyne.CanvasObject{r.copyButton}
+
 	if r.textBox.isPassword {
-		eyeBtn = NewIconButton(
-			theme.VisibilityIcon(),
+		r.eyeButton = NewIconButtonSimple(
+			r.eyeIcon,
 			"",
-			fyne.NewSize(12, 12),
+			r.buttonSize,
 			"Göster/Gizle",
 			func() {
 				r.textBox.hidden = !r.textBox.hidden
-				r.textBox.displayLabel.Text = r.textBox.getDisplayText()
+				r.textBox.displayLabel.SetText(r.textBox.getDisplayText())
 				r.textBox.displayLabel.Refresh()
+				r.updateEyeIcon()
 			},
-			nil, nil,
 		)
+		buttonObjects = append([]fyne.CanvasObject{r.eyeButton}, buttonObjects...)
 	}
 
-	var buttonsBox fyne.CanvasObject
-	if r.textBox.isPassword {
-		buttonsBox = container.NewHBox(eyeBtn, copyBtn)
-	} else {
-		buttonsBox = copyBtn
-	}
+	buttons := container.NewHBox(buttonObjects...)
+	r.readOnlyContainer = container.NewBorder(nil, nil, nil, buttons, r.textBox.displayLabel)
+}
 
-	r.readOnlyUI = newReadOnlyTextBoxContainer(r.textBox, buttonsBox)
-
-	// Edit UI
+func (r *customTextBoxRenderer) buildEditUI() {
 	if r.textBox.isMultiLine {
-		r.textBox.editEntry = widget.NewMultiLineEntry()
-		r.textBox.editEntry.Wrapping = fyne.TextWrapWord
+		entry := widget.NewMultiLineEntry()
+		entry.Wrapping = fyne.TextWrapWord
+		r.textBox.editEntry = entry
 	} else {
-		r.textBox.editEntry = widget.NewEntry()
+		entry := widget.NewEntry()
+		entry.OnSubmitted = func(value string) {
+			r.saveEdit()
+		}
+		r.textBox.editEntry = entry
 	}
+
 	r.textBox.editEntry.SetText(r.textBox.text)
+	r.textBox.editEntry.Password = r.textBox.isPassword
 
 	saveBtn := widget.NewButtonWithIcon("", theme.ConfirmIcon(), func() {
-		r.textBox.text = r.textBox.editEntry.Text
-		r.textBox.readOnly = true
-		r.textBox.displayLabel.Text = r.textBox.getDisplayText()
-		r.textBox.BaseWidget.Refresh()
-		if canvas := fyne.CurrentApp().Driver().CanvasForObject(r.textBox); canvas != nil {
-			canvas.Refresh(r.textBox)
-		}
-		if r.textBox.onSave != nil {
-			r.textBox.onSave(r.textBox.text)
-		}
+		r.saveEdit()
 	})
 	saveBtn.Importance = widget.HighImportance
 
 	cancelBtn := widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
-		r.textBox.readOnly = true
-		r.textBox.BaseWidget.Refresh()
-		if canvas := fyne.CurrentApp().Driver().CanvasForObject(r.textBox); canvas != nil {
-			canvas.Refresh(r.textBox)
-		}
+		r.cancelEdit()
 	})
 	cancelBtn.Importance = widget.LowImportance
 
-	buttons := container.NewHBox(saveBtn, cancelBtn)
-
-	r.editUI = container.NewBorder(
-		nil, nil, nil, buttons,
-		r.textBox.editEntry,
-	)
-
-	r.initialized = true
-	r.updateCurrentUI()
+	buttonBar := container.NewHBox(saveBtn, cancelBtn)
+	r.editContainer = container.NewBorder(nil, nil, nil, buttonBar, r.textBox.editEntry)
 }
 
-func (r *customTextBoxRenderer) updateCurrentUI() {
-	if r.textBox.readOnly {
-		r.currentUI = r.readOnlyUI
+func (r *customTextBoxRenderer) saveEdit() {
+	if r.textBox.editEntry == nil {
+		return
+	}
+
+	r.textBox.text = r.textBox.editEntry.Text
+	r.textBox.readOnly = true
+	r.textBox.hidden = r.textBox.isPassword
+	r.textBox.displayLabel.SetText(r.textBox.getDisplayText())
+	r.textBox.BaseWidget.Refresh()
+
+	if r.textBox.onSave != nil {
+		r.textBox.onSave(r.textBox.text)
+	}
+}
+
+func (r *customTextBoxRenderer) cancelEdit() {
+	r.textBox.readOnly = true
+	r.textBox.hidden = r.textBox.isPassword
+	if r.textBox.editEntry != nil {
+		r.textBox.editEntry.SetText(r.textBox.text)
+	}
+	r.textBox.displayLabel.SetText(r.textBox.getDisplayText())
+	r.textBox.BaseWidget.Refresh()
+}
+
+func (r *customTextBoxRenderer) updateEyeIcon() {
+	if r.eyeButton == nil {
+		return
+	}
+	if r.textBox.hidden {
+		r.eyeButton.icon = r.eyeIcon
 	} else {
-		r.currentUI = r.editUI
+		r.eyeButton.icon = r.hiddenIcon
+	}
+	r.eyeButton.Refresh()
+}
+
+func (r *customTextBoxRenderer) updateVisibility() {
+	if r.textBox.readOnly {
+		r.editContainer.Hide()
+		r.readOnlyContainer.Show()
+	} else {
+		r.readOnlyContainer.Hide()
+		r.editContainer.Show()
 	}
 }
 
-func (r *customTextBoxRenderer) Layout(space fyne.Size) {
-	if r.currentUI != nil {
-		r.currentUI.Move(fyne.NewPos(0, 0))
-		r.currentUI.Resize(space)
-
-		// Eğer readOnly ise, renderer'ını layout et
-		if r.textBox.readOnly && r.readOnlyUI != nil {
-			renderer := r.readOnlyUI.CreateRenderer()
-			if renderer != nil {
-				renderer.Layout(space)
-			}
-		}
-	}
+func (r *customTextBoxRenderer) Layout(size fyne.Size) {
+	r.readOnlyContainer.Resize(size)
+	r.editContainer.Resize(size)
 }
 
 func (r *customTextBoxRenderer) MinSize() fyne.Size {
-	if r.currentUI != nil {
-		return r.currentUI.MinSize()
+	ro := r.readOnlyContainer.MinSize()
+	ed := r.editContainer.MinSize()
+
+	width := ro.Width
+	if ed.Width > width {
+		width = ed.Width
 	}
-	return fyne.NewSize(100, 30)
+
+	height := ro.Height
+	if ed.Height > height {
+		height = ed.Height
+	}
+
+	return fyne.NewSize(width, height)
 }
 
 func (r *customTextBoxRenderer) Objects() []fyne.CanvasObject {
-	if r.currentUI != nil {
-		// Eğer readOnly ise, readOnlyUI'nin objects'lerini döndür
-		if r.textBox.readOnly && r.readOnlyUI != nil {
-			renderer := r.readOnlyUI.CreateRenderer()
-			if renderer != nil {
-				return renderer.Objects()
-			}
-		}
-		// Eğer edit mode ise, editUI'nin objects'lerini döndür
-		if !r.textBox.readOnly && r.editUI != nil {
-			return r.editUI.Objects
-		}
-	}
-	return []fyne.CanvasObject{}
+	return []fyne.CanvasObject{r.readOnlyContainer, r.editContainer}
 }
 
 func (r *customTextBoxRenderer) Refresh() {
-	// Edit mode'a geçilirse, editEntry'yi create et
-	if !r.textBox.readOnly && r.textBox.editEntry == nil {
-		if r.textBox.isMultiLine {
-			r.textBox.editEntry = widget.NewMultiLineEntry()
-			r.textBox.editEntry.Wrapping = fyne.TextWrapWord
-		} else {
-			r.textBox.editEntry = widget.NewEntry()
-		}
-		r.textBox.editEntry.SetText(r.textBox.text)
-	}
-
-	r.updateCurrentUI()
-
-	if r.textBox.readOnly {
-		r.textBox.displayLabel.Text = r.textBox.getDisplayText()
-	} else if r.textBox.editEntry != nil {
-		r.textBox.editEntry.SetText(r.textBox.text)
-	}
+	r.textBox.displayLabel.SetText(r.textBox.getDisplayText())
+	r.textBox.displayLabel.Refresh()
+	r.updateEyeIcon()
+	r.updateVisibility()
 }
 
 func (r *customTextBoxRenderer) Destroy() {}
