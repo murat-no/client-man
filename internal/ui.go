@@ -391,57 +391,66 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 	tabs := container.NewAppTabs()
 
 	// Firma Tab
-	ebsVersionOptions := []string{"all", "r11", "r12", "12.1", "12.2", "Cloud"}
 	firmaContent := widget.NewForm(
-		widget.NewFormItem("Firma Adı", s.createEditableLabel(client.Company, false, index, func(c *Client, v string) { c.Company = v })),
-		widget.NewFormItem("EBS Versiyon", s.createEditableSelect(fallback(client.EBSVersion), ebsVersionOptions, index, func(c *Client, v string) { c.EBSVersion = v })),
-		widget.NewFormItem("Not", s.createEditableLabel(fallback(client.Notes), true, index, func(c *Client, v string) { c.Notes = v })),
+		s.createCustomTextBoxItem("Firma Adı", client.Company, false, false, index, func(c *Client, v string) { c.Company = v }),
+		s.createCustomTextBoxItem("EBS Versiyon", fallback(client.EBSVersion), false, false, index, func(c *Client, v string) { c.EBSVersion = v }),
+		s.createCustomTextBoxItem("Not", fallback(client.Notes), false, true, index, func(c *Client, v string) { c.Notes = v }),
 	)
 	tabs.Append(container.NewTabItemWithIcon(TabNameCompany, theme.InfoIcon(), wrapWithBlueBackground(firmaContent)))
 
 	// VPN Tab
 	vpnForm := widget.NewForm(
-		widget.NewFormItem("Uygulama", s.createEditableLabel(fallback(client.VPN.App), false, index, func(c *Client, v string) { c.VPN.App = v })),
-		widget.NewFormItem("Host", s.createEditableLabel(fallback(client.VPN.Host), false, index, func(c *Client, v string) { c.VPN.Host = v })),
-		widget.NewFormItem("Kullanıcı", s.createEditableLabel(fallback(client.VPN.User), false, index, func(c *Client, v string) { c.VPN.User = v })),
-		widget.NewFormItem("Parola", s.createEditablePasswordLabel(fallback(client.VPN.Password), index, func(c *Client, v string) { c.VPN.Password = v })),
-		widget.NewFormItem("2FA", s.createEditableLabel(fallback(client.VPN.TwoFATokenApp), false, index, func(c *Client, v string) { c.VPN.TwoFATokenApp = v })),
-		widget.NewFormItem("Not", s.createEditableLabel(fallback(client.VPN.Notes), true, index, func(c *Client, v string) { c.VPN.Notes = v })),
+		s.createCustomTextBoxItem("Uygulama", fallback(client.VPN.App), false, false, index, func(c *Client, v string) { c.VPN.App = v }),
+		s.createCustomTextBoxItem("Host", fallback(client.VPN.Host), false, false, index, func(c *Client, v string) { c.VPN.Host = v }),
+		s.createCustomTextBoxItem("Kullanıcı", fallback(client.VPN.User), false, false, index, func(c *Client, v string) { c.VPN.User = v }),
+		s.createCustomTextBoxItem("Parola", fallback(client.VPN.Password), true, false, index, func(c *Client, v string) { c.VPN.Password = v }),
+		s.createCustomTextBoxItem("2FA", fallback(client.VPN.TwoFATokenApp), false, false, index, func(c *Client, v string) { c.VPN.TwoFATokenApp = v }),
+		s.createCustomTextBoxItem("Not", fallback(client.VPN.Notes), false, true, index, func(c *Client, v string) { c.VPN.Notes = v }),
 	)
 	tabs.Append(container.NewTabItem(TabNameVPN, wrapWithBlueBackground(vpnForm)))
 
 	// Data Accordion
 	dataContent := widget.NewForm(
-		widget.NewFormItem("Jira URI", s.createClickableURLLabel(fallback(client.Data.JiraURI), index, func(c *Client, v string) { c.Data.JiraURI = v })),
-		widget.NewFormItem("Jira User", s.createEditableLabel(fallback(client.Data.JiraUser), false, index, func(c *Client, v string) { c.Data.JiraUser = v })),
-		widget.NewFormItem("Jira Pass", s.createEditablePasswordLabel(fallback(client.Data.JiraPassword), index, func(c *Client, v string) { c.Data.JiraPassword = v })),
-		widget.NewFormItem("Kullanıcı", s.createEditableLabel(fallback(client.Data.User), false, index, func(c *Client, v string) { c.Data.User = v })),
-		widget.NewFormItem("Pass Reset", s.createEditableLabel(fallback(client.Data.PasswordReset), false, index, func(c *Client, v string) { c.Data.PasswordReset = v })),
+		s.createCustomTextBoxItem("Jira URI", fallback(client.Data.JiraURI), false, false, index, func(c *Client, v string) { c.Data.JiraURI = v }),
+		s.createCustomTextBoxItem("Jira User", fallback(client.Data.JiraUser), false, false, index, func(c *Client, v string) { c.Data.JiraUser = v }),
+		s.createCustomTextBoxItem("Jira Pass", fallback(client.Data.JiraPassword), true, false, index, func(c *Client, v string) { c.Data.JiraPassword = v }),
+		s.createCustomTextBoxItem("Kullanıcı", fallback(client.Data.User), false, false, index, func(c *Client, v string) { c.Data.User = v }),
+		s.createCustomTextBoxItem("Pass Reset", fallback(client.Data.PasswordReset), false, false, index, func(c *Client, v string) { c.Data.PasswordReset = v }),
 	)
 
 	// RDC - Custom Expandable Item
 	rdcContainer := container.NewVBox()
 	if len(client.Data.RDC) > 0 {
-		rdcContent := s.createEditableLabel(strings.Join(client.Data.RDC, "\n"), true, index, func(c *Client, v string) {
-			c.Data.RDC = strings.Split(v, "\n")
+		rdcTextBox := NewCustomTextBox(strings.Join(client.Data.RDC, "\n"), false, true, func(v string) {
+			client.Data.RDC = strings.Split(strings.TrimSpace(v), "\n")
+			if err := s.saveClients(); err != nil {
+				dialog.ShowError(err, s.window)
+			}
+		}, func() fyne.Window {
+			return s.window
 		})
 
 		rdcBadge := newBadge(fmt.Sprintf("%d", len(client.Data.RDC)), color.RGBA{59, 130, 246, 255})
 		rdcHeader := newAccordionHeader("RDC", rdcBadge, []fyne.CanvasObject{}, nil)
-		rdcItem := newExpandableItem(rdcHeader, rdcContent)
+		rdcItem := newExpandableItem(rdcHeader, rdcTextBox)
 		rdcContainer.Add(rdcItem)
 	}
 
 	// Hosts - Custom Expandable Item
 	hostsContainer := container.NewVBox()
 	if len(client.Data.Hosts) > 0 {
-		hostsContent := s.createEditableLabel(strings.Join(client.Data.Hosts, "\n"), true, index, func(c *Client, v string) {
-			c.Data.Hosts = strings.Split(v, "\n")
+		hostsTextBox := NewCustomTextBox(strings.Join(client.Data.Hosts, "\n"), false, true, func(v string) {
+			client.Data.Hosts = strings.Split(strings.TrimSpace(v), "\n")
+			if err := s.saveClients(); err != nil {
+				dialog.ShowError(err, s.window)
+			}
+		}, func() fyne.Window {
+			return s.window
 		})
 
 		hostsBadge := newBadge(fmt.Sprintf("%d", len(client.Data.Hosts)), color.RGBA{59, 130, 246, 255})
 		hostsHeader := newAccordionHeader("Hosts", hostsBadge, []fyne.CanvasObject{}, nil)
-		hostsItem := newExpandableItem(hostsHeader, hostsContent)
+		hostsItem := newExpandableItem(hostsHeader, hostsTextBox)
 		hostsContainer.Add(hostsItem)
 	}
 
@@ -456,22 +465,21 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 	// Apps - Custom Expandable Items
 	if len(client.Apps) > 0 {
 		appsContainer := container.NewVBox()
-		appTypeOptions := []string{"DEV", "TEST", "PREP", "PROD"}
 		for appIdx, app := range client.Apps {
 			idx := appIdx // Capture the index value to avoid closure issues
 			appForm := widget.NewForm(
-				widget.NewFormItem("Tip", s.createEditableSelect(fallback(app.Type), appTypeOptions, index, func(c *Client, v string) { c.Apps[idx].Type = v })),
-				widget.NewFormItem("İsim", s.createEditableLabel(fallback(app.Name), false, index, func(c *Client, v string) { c.Apps[idx].Name = v })),
-				widget.NewFormItem("User", s.createEditableLabel(fallback(app.User), false, index, func(c *Client, v string) { c.Apps[idx].User = v })),
-				widget.NewFormItem("Pass", s.createEditablePasswordLabel(fallback(app.Password), index, func(c *Client, v string) { c.Apps[idx].Password = v })),
-				widget.NewFormItem("DB IP", s.createEditableLabel(fallback(app.DBServerIP), false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v })),
-				widget.NewFormItem("TNS", s.createEditableLabel(fallback(app.TNS), false, index, func(c *Client, v string) { c.Apps[idx].TNS = v })),
-				widget.NewFormItem("App IP", s.createEditableLabel(fallback(app.AppServerIP), false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v })),
-				widget.NewFormItem("App URI", s.createClickableURLLabel(fallback(app.AppServerURI), index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v })),
-				widget.NewFormItem("App User", s.createEditableLabel(fallback(app.AppServerUser), false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v })),
-				widget.NewFormItem("App Pass", s.createEditablePasswordLabel(fallback(app.AppServerPass), index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v })),
-				widget.NewFormItem("SSH Params", s.createEditableLabel(fallback(app.SSHParams), false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v })),
-				widget.NewFormItem("URI", s.createClickableURLLabel(fallback(app.AppURI), index, func(c *Client, v string) { c.Apps[idx].AppURI = v })),
+				s.createCustomTextBoxItem("Tip", fallback(app.Type), false, false, index, func(c *Client, v string) { c.Apps[idx].Type = v }),
+				s.createCustomTextBoxItem("İsim", fallback(app.Name), false, false, index, func(c *Client, v string) { c.Apps[idx].Name = v }),
+				s.createCustomTextBoxItem("User", fallback(app.User), false, false, index, func(c *Client, v string) { c.Apps[idx].User = v }),
+				s.createCustomTextBoxItem("Pass", fallback(app.Password), true, false, index, func(c *Client, v string) { c.Apps[idx].Password = v }),
+				s.createCustomTextBoxItem("DB IP", fallback(app.DBServerIP), false, false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v }),
+				s.createCustomTextBoxItem("TNS", fallback(app.TNS), false, false, index, func(c *Client, v string) { c.Apps[idx].TNS = v }),
+				s.createCustomTextBoxItem("App IP", fallback(app.AppServerIP), false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v }),
+				s.createCustomTextBoxItem("App URI", fallback(app.AppServerURI), false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v }),
+				s.createCustomTextBoxItem("App User", fallback(app.AppServerUser), false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v }),
+				s.createCustomTextBoxItem("App Pass", fallback(app.AppServerPass), true, false, index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v }),
+				s.createCustomTextBoxItem("SSH Params", fallback(app.SSHParams), false, false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v }),
+				s.createCustomTextBoxItem("URI", fallback(app.AppURI), false, false, index, func(c *Client, v string) { c.Apps[idx].AppURI = v }),
 			)
 
 			// App Users - Custom Expandable Item
