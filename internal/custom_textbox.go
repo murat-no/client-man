@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/url"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ type CustomTextBox struct {
 	text        string
 	isPassword  bool
 	isMultiLine bool
+	isURL       bool
 	readOnly    bool
 	hidden      bool
 
@@ -29,11 +31,12 @@ type CustomTextBox struct {
 	maxDisplayLen int
 }
 
-func NewCustomTextBox(text string, isPassword bool, isMultiLine bool, onSave func(string), getWindow func() fyne.Window) *CustomTextBox {
+func NewCustomTextBox(text string, isPassword bool, isMultiLine bool, isURL bool, onSave func(string), getWindow func() fyne.Window) *CustomTextBox {
 	ctb := &CustomTextBox{
 		text:          text,
 		isPassword:    isPassword,
 		isMultiLine:   isMultiLine,
+		isURL:         isURL,
 		readOnly:      true,
 		hidden:        isPassword,
 		onSave:        onSave,
@@ -108,7 +111,28 @@ func (ctb *CustomTextBox) DoubleTapped(_ *fyne.PointEvent) {
 	})
 }
 
-func (ctb *CustomTextBox) Tapped(_ *fyne.PointEvent) {}
+func (ctb *CustomTextBox) Tapped(_ *fyne.PointEvent) {
+	// URL ise ve readonly modda ise tarayıcıda aç
+	if ctb.isURL && ctb.readOnly && strings.TrimSpace(ctb.text) != "" && ctb.text != "—" {
+		if parsedURL := parseURLString(ctb.text); parsedURL != nil {
+			if err := fyne.CurrentApp().OpenURL(parsedURL); err != nil {
+				// Hata durumunda sessizce devam et
+			}
+		}
+	}
+}
+
+// parseURLString string'i *url.URL'ye çevirir
+func parseURLString(urlStr string) *url.URL {
+	// Eğer protocol yoksa http:// ekle
+	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
+		urlStr = "http://" + urlStr
+	}
+	if parsedURL, err := url.Parse(urlStr); err == nil {
+		return parsedURL
+	}
+	return nil
+}
 
 type customTextBoxRenderer struct {
 	textBox *CustomTextBox
@@ -118,6 +142,7 @@ type customTextBoxRenderer struct {
 
 	copyButton *IconButton
 	eyeButton  *IconButton
+	hyperlink  *widget.Hyperlink
 	copyIcon   fyne.Resource
 	copiedIcon fyne.Resource
 	eyeIcon    fyne.Resource
@@ -143,6 +168,13 @@ func newCustomTextBoxRenderer(textBox *CustomTextBox) *customTextBoxRenderer {
 
 func (r *customTextBoxRenderer) buildReadOnlyUI() {
 	r.textBox.displayLabel.SetText(r.textBox.getDisplayText())
+
+	// URL için hyperlink widget'i oluştur
+	if r.textBox.isURL && r.textBox.text != "" && r.textBox.text != "—" {
+		if parsedURL := parseURLString(r.textBox.text); parsedURL != nil {
+			r.hyperlink = widget.NewHyperlink(r.textBox.text, parsedURL)
+		}
+	}
 
 	r.copyButton = NewIconButtonSimple(
 		r.copyIcon,
@@ -186,7 +218,16 @@ func (r *customTextBoxRenderer) buildReadOnlyUI() {
 	}
 
 	buttons := container.NewHBox(buttonObjects...)
-	r.readOnlyContainer = container.NewBorder(nil, nil, nil, buttons, r.textBox.displayLabel)
+
+	// URL ise hyperlink kullan, değilse normal label
+	var displayWidget fyne.CanvasObject
+	if r.hyperlink != nil {
+		displayWidget = r.hyperlink
+	} else {
+		displayWidget = r.textBox.displayLabel
+	}
+
+	r.readOnlyContainer = container.NewBorder(nil, nil, nil, buttons, displayWidget)
 }
 
 func (r *customTextBoxRenderer) buildEditUI() {
@@ -301,7 +342,7 @@ func (r *customTextBoxRenderer) Refresh() {
 
 func (r *customTextBoxRenderer) Destroy() {}
 
-func (s *AppState) createCustomTextBoxItem(label string, text string, isPassword bool, isMultiLine bool, clientIndex int, updateFunc func(*Client, string)) *widget.FormItem {
+func (s *AppState) createCustomTextBoxItem(label string, text string, isPassword bool, isMultiLine bool, isURL bool, clientIndex int, updateFunc func(*Client, string)) *widget.FormItem {
 	if isEncrypted(text) {
 		decrypted, err := decryptString(text)
 		if err == nil {
@@ -309,7 +350,7 @@ func (s *AppState) createCustomTextBoxItem(label string, text string, isPassword
 		}
 	}
 
-	textBox := NewCustomTextBox(text, isPassword, isMultiLine, func(newText string) {
+	textBox := NewCustomTextBox(text, isPassword, isMultiLine, isURL, func(newText string) {
 		if clientIndex >= 0 && clientIndex < len(s.clients) {
 			updateFunc(&s.clients[clientIndex], newText)
 			if err := s.saveClients(); err != nil {

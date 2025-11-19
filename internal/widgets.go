@@ -1156,16 +1156,24 @@ func (h *accordionHeader) Tapped(_ *fyne.PointEvent) {
 // expandableItem custom accordion item - header + content
 type expandableItem struct {
 	widget.BaseWidget
-	header   *accordionHeader
-	content  fyne.CanvasObject
-	expanded bool
+	header      *accordionHeader
+	content     fyne.CanvasObject
+	expanded    bool
+	borderColor color.Color
+	borderWidth float32
 }
 
 func newExpandableItem(header *accordionHeader, content fyne.CanvasObject) *expandableItem {
+	return newExpandableItemWithBorder(header, content, color.Transparent, 0)
+}
+
+func newExpandableItemWithBorder(header *accordionHeader, content fyne.CanvasObject, borderColor color.Color, borderWidth float32) *expandableItem {
 	item := &expandableItem{
-		header:   header,
-		content:  content,
-		expanded: false,
+		header:      header,
+		content:     content,
+		expanded:    false,
+		borderColor: borderColor,
+		borderWidth: borderWidth,
 	}
 
 	// Header'a tap event'i bağla
@@ -1196,23 +1204,48 @@ func (item *expandableItem) CreateRenderer() fyne.WidgetRenderer {
 		container.Add(item.content)
 	}
 
+	// Border için rectangle oluştur
+	var border *canvas.Rectangle
+	if item.borderWidth > 0 {
+		border = canvas.NewRectangle(item.borderColor)
+	}
+
 	return &expandableItemRenderer{
 		item:      item,
 		container: container,
+		border:    border,
 	}
 }
 
 type expandableItemRenderer struct {
 	item      *expandableItem
 	container *fyne.Container
+	border    *canvas.Rectangle
 }
 
 func (r *expandableItemRenderer) Layout(size fyne.Size) {
-	r.container.Resize(size)
+	if r.border != nil {
+		// Border'ı tam genişliğe yay
+		r.border.Resize(size)
+		r.border.Move(fyne.NewPos(0, 0))
+
+		// Container'ı border içine yerleştir
+		inset := r.item.borderWidth
+		r.container.Resize(fyne.NewSize(size.Width-2*inset, size.Height-2*inset))
+		r.container.Move(fyne.NewPos(inset, inset))
+	} else {
+		r.container.Resize(size)
+	}
 }
 
 func (r *expandableItemRenderer) MinSize() fyne.Size {
-	return r.container.MinSize()
+	minSize := r.container.MinSize()
+	if r.border != nil {
+		// Border kalınlığını MinSize'a ekle
+		inset := r.item.borderWidth * 2
+		return fyne.NewSize(minSize.Width+inset, minSize.Height+inset)
+	}
+	return minSize
 }
 
 func (r *expandableItemRenderer) Refresh() {
@@ -1226,10 +1259,75 @@ func (r *expandableItemRenderer) Refresh() {
 }
 
 func (r *expandableItemRenderer) Objects() []fyne.CanvasObject {
+	if r.border != nil {
+		return []fyne.CanvasObject{r.border, r.container}
+	}
 	return []fyne.CanvasObject{r.container}
 }
 
 func (r *expandableItemRenderer) Destroy() {}
+
+// borderedContainer - İçeriği renkli çerçeve ile sarmalayan container
+type borderedContainer struct {
+	widget.BaseWidget
+	content     fyne.CanvasObject
+	borderColor color.Color
+	borderWidth float32
+}
+
+func newBorderedContainer(content fyne.CanvasObject, borderColor color.Color, borderWidth float32) *borderedContainer {
+	bc := &borderedContainer{
+		content:     content,
+		borderColor: borderColor,
+		borderWidth: borderWidth,
+	}
+	bc.ExtendBaseWidget(bc)
+	return bc
+}
+
+func (bc *borderedContainer) CreateRenderer() fyne.WidgetRenderer {
+	border := canvas.NewRectangle(bc.borderColor)
+
+	return &borderedContainerRenderer{
+		container: bc,
+		border:    border,
+	}
+}
+
+type borderedContainerRenderer struct {
+	container *borderedContainer
+	border    *canvas.Rectangle
+}
+
+func (r *borderedContainerRenderer) Layout(size fyne.Size) {
+	// Border sadece sol kenarda dikey çizgi olarak
+	r.border.Resize(fyne.NewSize(r.container.borderWidth, size.Height))
+	r.border.Move(fyne.NewPos(0, 0))
+
+	// Content border'dan sonra başlasın
+	contentX := r.container.borderWidth + 2 // Border genişliği + küçük boşluk
+	r.container.content.Resize(fyne.NewSize(size.Width-contentX, size.Height))
+	r.container.content.Move(fyne.NewPos(contentX, 0))
+}
+
+func (r *borderedContainerRenderer) MinSize() fyne.Size {
+	contentMin := r.container.content.MinSize()
+	// Sol border genişliği + küçük boşluk ekle
+	extraWidth := r.container.borderWidth + 2
+	return fyne.NewSize(contentMin.Width+extraWidth, contentMin.Height)
+}
+
+func (r *borderedContainerRenderer) Refresh() {
+	r.border.FillColor = r.container.borderColor
+	r.border.Refresh()
+	canvas.Refresh(r.container.content)
+}
+
+func (r *borderedContainerRenderer) Objects() []fyne.CanvasObject {
+	return []fyne.CanvasObject{r.border, r.container.content}
+}
+
+func (r *borderedContainerRenderer) Destroy() {}
 
 // maxWidthContainer - İçeriğin maksimum genişliğini sınırlandırır
 type maxWidthContainer struct {

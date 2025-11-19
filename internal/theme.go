@@ -2,6 +2,7 @@ package main
 
 import (
 	"image/color"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
@@ -20,7 +21,27 @@ var (
 	colorMenuBg     = color.NRGBA{R: 45, G: 45, B: 45, A: 255}  // Menü arka planı
 	colorMenuBorder = color.NRGBA{R: 70, G: 70, B: 70, A: 255}  // Menü çerçevesi
 	colorMenuHover  = color.NRGBA{R: 70, G: 70, B: 70, A: 255}  // Menü hover rengi
+
+	// Ortam tipi çerçeve renkleri
+	colorAppTypeProd  = color.NRGBA{R: 220, G: 38, B: 38, A: 255} // Kırmızı - PROD
+	colorAppTypeStage = color.NRGBA{R: 255, G: 165, B: 0, A: 255} // Turuncu - PREP/UAT
+	colorAppTypeOther = color.NRGBA{R: 34, G: 197, B: 94, A: 255} // Yeşil - Diğerleri (DEV, TEST vb.)
 )
+
+// getAppTypeBorderColor ortam tipine göre çerçeve rengini döndürür
+func getAppTypeBorderColor(appType string) color.Color {
+	// Büyük/küçük harf duyarsız karşılaştırma için
+	appTypeLower := strings.ToLower(strings.TrimSpace(appType))
+
+	switch appTypeLower {
+	case "prod", "production":
+		return colorAppTypeProd // Kırmızı
+	case "prep", "uat":
+		return colorAppTypeStage // Turuncu
+	default:
+		return colorAppTypeOther // Yeşil (dev, test, staging vb.)
+	}
+}
 
 // blueTheme - Custom tema for tabs
 type blueTheme struct {

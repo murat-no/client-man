@@ -392,36 +392,36 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 
 	// Firma Tab
 	firmaContent := widget.NewForm(
-		s.createCustomTextBoxItem("Firma Adı", client.Company, false, false, index, func(c *Client, v string) { c.Company = v }),
-		s.createCustomTextBoxItem("EBS Versiyon", fallback(client.EBSVersion), false, false, index, func(c *Client, v string) { c.EBSVersion = v }),
-		s.createCustomTextBoxItem("Not", fallback(client.Notes), false, true, index, func(c *Client, v string) { c.Notes = v }),
+		s.createCustomTextBoxItem("Firma Adı", client.Company, false, false, false, index, func(c *Client, v string) { c.Company = v }),
+		s.createCustomTextBoxItem("EBS Versiyon", fallback(client.EBSVersion), false, false, false, index, func(c *Client, v string) { c.EBSVersion = v }),
+		s.createCustomTextBoxItem("Not", fallback(client.Notes), false, true, false, index, func(c *Client, v string) { c.Notes = v }),
 	)
 	tabs.Append(container.NewTabItemWithIcon(TabNameCompany, theme.InfoIcon(), wrapWithBlueBackground(firmaContent)))
 
 	// VPN Tab
 	vpnForm := widget.NewForm(
-		s.createCustomTextBoxItem("Uygulama", fallback(client.VPN.App), false, false, index, func(c *Client, v string) { c.VPN.App = v }),
-		s.createCustomTextBoxItem("Host", fallback(client.VPN.Host), false, false, index, func(c *Client, v string) { c.VPN.Host = v }),
-		s.createCustomTextBoxItem("Kullanıcı", fallback(client.VPN.User), false, false, index, func(c *Client, v string) { c.VPN.User = v }),
-		s.createCustomTextBoxItem("Parola", fallback(client.VPN.Password), true, false, index, func(c *Client, v string) { c.VPN.Password = v }),
-		s.createCustomTextBoxItem("2FA", fallback(client.VPN.TwoFATokenApp), false, false, index, func(c *Client, v string) { c.VPN.TwoFATokenApp = v }),
-		s.createCustomTextBoxItem("Not", fallback(client.VPN.Notes), false, true, index, func(c *Client, v string) { c.VPN.Notes = v }),
+		s.createCustomTextBoxItem("Uygulama", fallback(client.VPN.App), false, false, false, index, func(c *Client, v string) { c.VPN.App = v }),
+		s.createCustomTextBoxItem("Host", fallback(client.VPN.Host), false, false, false, index, func(c *Client, v string) { c.VPN.Host = v }),
+		s.createCustomTextBoxItem("Kullanıcı", fallback(client.VPN.User), false, false, false, index, func(c *Client, v string) { c.VPN.User = v }),
+		s.createCustomTextBoxItem("Parola", fallback(client.VPN.Password), true, false, false, index, func(c *Client, v string) { c.VPN.Password = v }),
+		s.createCustomTextBoxItem("2FA", fallback(client.VPN.TwoFATokenApp), false, false, false, index, func(c *Client, v string) { c.VPN.TwoFATokenApp = v }),
+		s.createCustomTextBoxItem("Not", fallback(client.VPN.Notes), false, true, false, index, func(c *Client, v string) { c.VPN.Notes = v }),
 	)
 	tabs.Append(container.NewTabItem(TabNameVPN, wrapWithBlueBackground(vpnForm)))
 
 	// Data Accordion
 	dataContent := widget.NewForm(
-		s.createCustomTextBoxItem("Jira URI", fallback(client.Data.JiraURI), false, false, index, func(c *Client, v string) { c.Data.JiraURI = v }),
-		s.createCustomTextBoxItem("Jira User", fallback(client.Data.JiraUser), false, false, index, func(c *Client, v string) { c.Data.JiraUser = v }),
-		s.createCustomTextBoxItem("Jira Pass", fallback(client.Data.JiraPassword), true, false, index, func(c *Client, v string) { c.Data.JiraPassword = v }),
-		s.createCustomTextBoxItem("Kullanıcı", fallback(client.Data.User), false, false, index, func(c *Client, v string) { c.Data.User = v }),
-		s.createCustomTextBoxItem("Pass Reset", fallback(client.Data.PasswordReset), false, false, index, func(c *Client, v string) { c.Data.PasswordReset = v }),
+		s.createCustomTextBoxItem("Jira URI", fallback(client.Data.JiraURI), false, false, true, index, func(c *Client, v string) { c.Data.JiraURI = v }),
+		s.createCustomTextBoxItem("Jira User", fallback(client.Data.JiraUser), false, false, false, index, func(c *Client, v string) { c.Data.JiraUser = v }),
+		s.createCustomTextBoxItem("Jira Pass", fallback(client.Data.JiraPassword), true, false, false, index, func(c *Client, v string) { c.Data.JiraPassword = v }),
+		s.createCustomTextBoxItem("Kullanıcı", fallback(client.Data.User), false, false, false, index, func(c *Client, v string) { c.Data.User = v }),
+		s.createCustomTextBoxItem("Pass Reset", fallback(client.Data.PasswordReset), false, false, false, index, func(c *Client, v string) { c.Data.PasswordReset = v }),
 	)
 
 	// RDC - Custom Expandable Item
 	rdcContainer := container.NewVBox()
 	if len(client.Data.RDC) > 0 {
-		rdcTextBox := NewCustomTextBox(strings.Join(client.Data.RDC, "\n"), false, true, func(v string) {
+		rdcTextBox := NewCustomTextBox(strings.Join(client.Data.RDC, "\n"), false, true, false, func(v string) {
 			client.Data.RDC = strings.Split(strings.TrimSpace(v), "\n")
 			if err := s.saveClients(); err != nil {
 				dialog.ShowError(err, s.window)
@@ -439,7 +439,7 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 	// Hosts - Custom Expandable Item
 	hostsContainer := container.NewVBox()
 	if len(client.Data.Hosts) > 0 {
-		hostsTextBox := NewCustomTextBox(strings.Join(client.Data.Hosts, "\n"), false, true, func(v string) {
+		hostsTextBox := NewCustomTextBox(strings.Join(client.Data.Hosts, "\n"), false, true, false, func(v string) {
 			client.Data.Hosts = strings.Split(strings.TrimSpace(v), "\n")
 			if err := s.saveClients(); err != nil {
 				dialog.ShowError(err, s.window)
@@ -467,19 +467,20 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 		appsContainer := container.NewVBox()
 		for appIdx, app := range client.Apps {
 			idx := appIdx // Capture the index value to avoid closure issues
+			appTypeOptions := []string{"DEV", "TEST", "UAT", "PREP", "PROD"}
 			appForm := widget.NewForm(
-				s.createCustomTextBoxItem("Tip", fallback(app.Type), false, false, index, func(c *Client, v string) { c.Apps[idx].Type = v }),
-				s.createCustomTextBoxItem("İsim", fallback(app.Name), false, false, index, func(c *Client, v string) { c.Apps[idx].Name = v }),
-				s.createCustomTextBoxItem("User", fallback(app.User), false, false, index, func(c *Client, v string) { c.Apps[idx].User = v }),
-				s.createCustomTextBoxItem("Pass", fallback(app.Password), true, false, index, func(c *Client, v string) { c.Apps[idx].Password = v }),
-				s.createCustomTextBoxItem("DB IP", fallback(app.DBServerIP), false, false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v }),
-				s.createCustomTextBoxItem("TNS", fallback(app.TNS), false, false, index, func(c *Client, v string) { c.Apps[idx].TNS = v }),
-				s.createCustomTextBoxItem("App IP", fallback(app.AppServerIP), false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v }),
-				s.createCustomTextBoxItem("App URI", fallback(app.AppServerURI), false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v }),
-				s.createCustomTextBoxItem("App User", fallback(app.AppServerUser), false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v }),
-				s.createCustomTextBoxItem("App Pass", fallback(app.AppServerPass), true, false, index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v }),
-				s.createCustomTextBoxItem("SSH Params", fallback(app.SSHParams), false, false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v }),
-				s.createCustomTextBoxItem("URI", fallback(app.AppURI), false, false, index, func(c *Client, v string) { c.Apps[idx].AppURI = v }),
+				s.createCustomComboBoxItem("Tip", fallback(app.Type), appTypeOptions, index, func(c *Client, v string) { c.Apps[idx].Type = v }),
+				s.createCustomTextBoxItem("İsim", fallback(app.Name), false, false, false, index, func(c *Client, v string) { c.Apps[idx].Name = v }),
+				s.createCustomTextBoxItem("User", fallback(app.User), false, false, false, index, func(c *Client, v string) { c.Apps[idx].User = v }),
+				s.createCustomTextBoxItem("Pass", fallback(app.Password), true, false, false, index, func(c *Client, v string) { c.Apps[idx].Password = v }),
+				s.createCustomTextBoxItem("DB IP", fallback(app.DBServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v }),
+				s.createCustomTextBoxItem("TNS", fallback(app.TNS), false, false, false, index, func(c *Client, v string) { c.Apps[idx].TNS = v }),
+				s.createCustomTextBoxItem("App IP", fallback(app.AppServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v }),
+				s.createCustomTextBoxItem("App URI", fallback(app.AppServerURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v }),
+				s.createCustomTextBoxItem("App User", fallback(app.AppServerUser), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v }),
+				s.createCustomTextBoxItem("App Pass", fallback(app.AppServerPass), true, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v }),
+				s.createCustomTextBoxItem("SSH Params", fallback(app.SSHParams), false, false, false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v }),
+				s.createCustomTextBoxItem("URI", fallback(app.AppURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppURI = v }),
 			)
 
 			// App Users - Custom Expandable Item
@@ -542,8 +543,15 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 				nil,           // onTap daha sonra expandableItem tarafından set edilecek
 			)
 
+			// Ortam tipine göre border rengi al
+			borderColor := getAppTypeBorderColor(app.Type)
+
+			// Form'u önce border ile sarmala, sonra background ekle
+			borderedForm := newBorderedContainer(appForm, borderColor, 5)
+			contentWithBg := wrapWithBlueBackground(borderedForm)
+
 			// Expandable item oluştur
-			expandableApp := newExpandableItem(header, wrapWithBlueBackground(appForm))
+			expandableApp := newExpandableItem(header, contentWithBg)
 
 			// Önceki expand durumunu geri yükle
 			if s.expandedApps[client.Company] == nil {
@@ -566,8 +574,8 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 				s.expandedApps[client.Company][idx] = expandableApp.IsExpanded()
 			}
 
-			// Container'a ekle
-			appsContainer.Add(expandableApp)
+			// Container'a ekle - MaxLayout ile tam genişlik
+			appsContainer.Add(container.NewMax(expandableApp))
 			appsContainer.Add(widget.NewSeparator())
 		}
 
