@@ -4,13 +4,13 @@
             "Major": 1,
             "Minor": 0,
             "Patch": 0,
-            "Build": 0
+            "Build": 1
         },
         "ProductVersion": {
             "Major": 1,
             "Minor": 0,
             "Patch": 0,
-            "Build": 0
+            "Build": 1
         },
         "FileFlagsMask": "3f",
         "FileFlags ": "00",
@@ -22,14 +22,14 @@
         "Comments": "Murat Nohutcu",
         "CompanyName": "Murat Nohutcu",
         "FileDescription": "Client Manager Application",
-        "FileVersion": "1.0.0.0",
+        "FileVersion": "1.0.0.1",
         "InternalName": "client-manager",
         "LegalCopyright": "Murat Nohutcu",
         "LegalTrademarks": "",
         "OriginalFilename": "client-manager.exe",
         "PrivateBuild": "",
         "ProductName": "Client Manager",
-        "ProductVersion": "1.0.0.0",
+        "ProductVersion": "1.0.0.1",
         "SpecialBuild": ""
     },
     "VarFileInfo": {

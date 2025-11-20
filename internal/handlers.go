@@ -61,7 +61,7 @@ func (s *AppState) openFile() {
 // addClient yeni firma ekleme dialogu gösterir
 func (s *AppState) addClient() {
 	companyEntry := widget.NewEntry()
-	companyEntry.SetPlaceHolder("Firma adını girin...")
+	companyEntry.SetPlaceHolder("Customer name...")
 
 	// EBS versiyon seçimi
 	ebsVersionOptions := []string{"all", "r11", "r12", "12.1", "12.2", "Cloud"}
@@ -73,16 +73,16 @@ func (s *AppState) addClient() {
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
-			{Text: "Firma Adı:", Widget: companyEntry},
-			{Text: "EBS Versiyon:", Widget: ebsSelect},
-			{Text: "Not:", Widget: notesEntry},
+			{Text: "Customer Name:", Widget: companyEntry},
+			{Text: "EBS Version:", Widget: ebsSelect},
+			{Text: "Notes:", Widget: notesEntry},
 		},
 	}
 
 	// Custom dialog boyutu için
 	formContainer := container.NewVBox(form)
 
-	customDialog := dialog.NewCustomConfirm("Yeni Firma Ekle", "Ekle", "İptal", formContainer, func(ok bool) {
+	customDialog := dialog.NewCustomConfirm("Add New Customer", "Add", "Cancel", formContainer, func(ok bool) {
 		if !ok || strings.TrimSpace(companyEntry.Text) == "" {
 			return
 		}
@@ -128,13 +128,13 @@ func (s *AppState) editClient(index int) {
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
-			{Text: "Firma Adı:", Widget: companyEntry},
-			{Text: "EBS Versiyon:", Widget: ebsEntry},
-			{Text: "Not:", Widget: notesEntry},
+			{Text: "Customer Name:", Widget: companyEntry},
+			{Text: "EBS Version:", Widget: ebsEntry},
+			{Text: "Notes:", Widget: notesEntry},
 		},
 	}
 
-	dialog.ShowForm("Firma Düzenle", "Kaydet", "İptal", form.Items, func(ok bool) {
+	dialog.ShowForm("Edit Customer", "Save", "Cancel", form.Items, func(ok bool) {
 		if !ok {
 			return
 		}
@@ -164,7 +164,7 @@ func (s *AppState) deleteClient(index int) {
 
 	dialog.ShowConfirm(
 		DialogTitleDeleteConfirm,
-		fmt.Sprintf("'%s' firmasını silmek istediğinize emin misiniz?", client.Company),
+		fmt.Sprintf("Are you sure you want to delete the customer '%s'?", client.Company),
 		func(ok bool) {
 			if !ok {
 				return
@@ -198,14 +198,14 @@ func (s *AppState) exportClientForCustomer(index int) {
 
 	// Şifreleme yap (export dosyasında da şifre tutulsun)
 	if err := encryptClientsInPlace([]Client{clientCopy}); err != nil {
-		dialog.ShowError(fmt.Errorf("şifreleme hatası: %w", err), s.window)
+		dialog.ShowError(fmt.Errorf("encryption error: %w", err), s.window)
 		return
 	}
 
 	// Native Windows dialog kullan
 	filename, err := nativeDialog.File().
 		Title(DialogTitleSaveData).
-		Filter("JSON Dosyası", "json").
+		Filter("JSON File", "json").
 		SetStartFile(client.Company + "_export.json").
 		Save()
 
@@ -234,7 +234,7 @@ func (s *AppState) importClientFromCustomer() {
 	// Native Windows dialog kullan
 	filename, err := nativeDialog.File().
 		Title(DialogTitleOpenData).
-		Filter("JSON Dosyası", "json").
+		Filter("JSON File", "json").
 		Load()
 
 	if err != nil {
@@ -263,7 +263,7 @@ func (s *AppState) importClientFromCustomer() {
 
 	// Şifreli alanları decrypt et (eğer şifreliyse)
 	if err := decryptClientsInPlace(importedClients); err != nil {
-		dialog.ShowError(fmt.Errorf("decrypt hatası: %v", err), s.window)
+		dialog.ShowError(fmt.Errorf("decrypt error: %v", err), s.window)
 		return
 	}
 
@@ -293,8 +293,8 @@ func (s *AppState) importClientFromCustomer() {
 			idx := foundIndex
 			localClient := client
 			dialog.ShowConfirm(
-				"Firma Zaten Var",
-				fmt.Sprintf("'%s' firması zaten mevcut. Üzerine yazmak ister misiniz?\n\nUyarı: Mevcut VPN bilgileri korunacak!", localClient.Company),
+				"Customer Already Exists",
+				fmt.Sprintf("'%s' Customer Already Exists. Do you want to overwrite it?\n\nWarning: Existing VPN information will be preserved!", localClient.Company),
 				func(ok bool) {
 					if ok {
 						// Mevcut VPN bilgilerini koru
@@ -305,7 +305,7 @@ func (s *AppState) importClientFromCustomer() {
 							dialog.ShowError(err, s.window)
 							return
 						}
-						dialog.ShowInformation(DialogTitleSuccess, "Firma güncellendi!", s.window)
+						dialog.ShowInformation(DialogTitleSuccess, "Customer updated!", s.window)
 					}
 				},
 				s.window,
@@ -339,7 +339,7 @@ func (s *AppState) exportAllClientsForCustomer() {
 
 	// Şifreleme yap (export dosyasında da şifreler tutulsun)
 	if err := encryptClientsInPlace(clientsCopy); err != nil {
-		dialog.ShowError(fmt.Errorf("şifreleme hatası: %w", err), s.window)
+		dialog.ShowError(fmt.Errorf("encryption error: %w", err), s.window)
 		return
 	}
 
@@ -450,7 +450,7 @@ func (s *AppState) deleteApp(filteredIndex, appIndex int) {
 
 	// Onay dialogu göster
 	dialog.ShowConfirm(DialogTitleDeleteEnv,
-		fmt.Sprintf("'%s' ortamını silmek istediğinizden emin misiniz?", appName),
+		fmt.Sprintf("Are you sure you want to delete the environment '%s'?", appName),
 		func(confirmed bool) {
 			if !confirmed {
 				return

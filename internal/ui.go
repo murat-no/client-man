@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"image/color"
 	"path/filepath"
 	"strings"
 
@@ -106,7 +105,7 @@ func (s *AppState) createAppUsersWidget(appUsers []string, companyName string, a
 func (s *AppState) buildUI() fyne.CanvasObject {
 	// Search box
 	s.searchEntry = widget.NewEntry()
-	s.searchEntry.SetPlaceHolder("Firma ara...")
+	s.searchEntry.SetPlaceHolder("Search Customer...")
 	s.searchEntry.OnChanged = func(text string) {
 		s.filterClients(text)
 	}
@@ -119,12 +118,12 @@ func (s *AppState) buildUI() fyne.CanvasObject {
 	var hamburgerBtn *widget.Button
 	hamburgerBtn = widget.NewButtonWithIcon("", theme.MenuIcon(), func() {
 		// Show popup menu with options
-		newFirmaItem := fyne.NewMenuItem("Yeni Firma", func() {
+		newFirmaItem := fyne.NewMenuItem("New Customer", func() {
 			s.addClient()
 		})
 		newFirmaItem.Icon = theme.ContentAddIcon()
 
-		importItem := fyne.NewMenuItem("Müşteri Import", func() {
+		importItem := fyne.NewMenuItem("Customer Import", func() {
 			s.importClientFromCustomer()
 		})
 		importItem.Icon = theme.DownloadIcon()
@@ -186,7 +185,7 @@ func (s *AppState) createExpandableClientItem(client Client, index int) fyne.Can
 
 	// VPN badge (yeşil text) - sadece VPN bilgisi varsa
 	if client.VPN.App != "" || client.VPN.Host != "" || client.VPN.User != "" || client.VPN.Password != "" {
-		vpnBadge := newBadge("VPN", color.RGBA{34, 197, 94, 255})
+		vpnBadge := newBadge("VPN", colorBadgeGreen)
 		badges.Add(vpnBadge)
 	}
 
@@ -195,7 +194,7 @@ func (s *AppState) createExpandableClientItem(client Client, index int) fyne.Can
 	if ebsText == "" {
 		ebsText = "all"
 	}
-	ebsBadge := newBadge(ebsText, color.RGBA{59, 130, 246, 255})
+	ebsBadge := newBadge(ebsText, colorBadgeBlue)
 	badges.Add(ebsBadge)
 
 	var menuBtn fyne.CanvasObject
@@ -211,7 +210,7 @@ func (s *AppState) createExpandableClientItem(client Client, index int) fyne.Can
 	iconContainer := container.NewStack(icon)
 	iconContainer.Resize(fyne.NewSize(16, 16)) // Daha küçük tıklanabilir alan
 
-	menuBtn = NewIconButtonSimple(theme.MenuIcon(), "", fyne.NewSize(16, 16), "Menü - Dışa aktar, içe aktar, ayarlar", func() {
+	menuBtn = NewIconButtonSimple(theme.MenuIcon(), "", fyne.NewSize(16, 16), "Menu - Export, Import, Settings", func() {
 		// Eğer menü zaten açıksa kapat
 		if menuOverlay != nil {
 			s.window.Canvas().Overlays().Remove(menuOverlay)
@@ -220,7 +219,7 @@ func (s *AppState) createExpandableClientItem(client Client, index int) fyne.Can
 		}
 
 		// Menü öğeleri
-		exportItem := newMenuItemWithIcon(theme.UploadIcon(), "Dışa Aktar", func() {
+		exportItem := newMenuItemWithIcon(theme.UploadIcon(), "Export", func() {
 			if menuOverlay != nil {
 				s.window.Canvas().Overlays().Remove(menuOverlay)
 				menuOverlay = nil
@@ -228,7 +227,7 @@ func (s *AppState) createExpandableClientItem(client Client, index int) fyne.Can
 			s.exportClientForCustomer(index)
 		})
 
-		deleteItem := newMenuItemWithIcon(theme.DeleteIcon(), "Sil", func() {
+		deleteItem := newMenuItemWithIcon(theme.DeleteIcon(), "Delete", func() {
 			if menuOverlay != nil {
 				s.window.Canvas().Overlays().Remove(menuOverlay)
 				menuOverlay = nil
@@ -392,20 +391,20 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 
 	// Firma Tab
 	firmaContent := widget.NewForm(
-		s.createCustomTextBoxItem("Firma Adı", client.Company, false, false, false, index, func(c *Client, v string) { c.Company = v }),
-		s.createCustomTextBoxItem("EBS Versiyon", fallback(client.EBSVersion), false, false, false, index, func(c *Client, v string) { c.EBSVersion = v }),
-		s.createCustomTextBoxItem("Not", fallback(client.Notes), false, true, false, index, func(c *Client, v string) { c.Notes = v }),
+		s.createCustomTextBoxItem("Company Name", client.Company, false, false, false, index, func(c *Client, v string) { c.Company = v }),
+		s.createCustomTextBoxItem("EBS Version", fallback(client.EBSVersion), false, false, false, index, func(c *Client, v string) { c.EBSVersion = v }),
+		s.createCustomTextBoxItem("Note", fallback(client.Notes), false, true, false, index, func(c *Client, v string) { c.Notes = v }),
 	)
 	tabs.Append(container.NewTabItemWithIcon(TabNameCompany, theme.InfoIcon(), wrapWithBlueBackground(firmaContent)))
 
 	// VPN Tab
 	vpnForm := widget.NewForm(
-		s.createCustomTextBoxItem("Uygulama", fallback(client.VPN.App), false, false, false, index, func(c *Client, v string) { c.VPN.App = v }),
+		s.createCustomTextBoxItem("Application", fallback(client.VPN.App), false, false, false, index, func(c *Client, v string) { c.VPN.App = v }),
 		s.createCustomTextBoxItem("Host", fallback(client.VPN.Host), false, false, false, index, func(c *Client, v string) { c.VPN.Host = v }),
-		s.createCustomTextBoxItem("Kullanıcı", fallback(client.VPN.User), false, false, false, index, func(c *Client, v string) { c.VPN.User = v }),
-		s.createCustomTextBoxItem("Parola", fallback(client.VPN.Password), true, false, false, index, func(c *Client, v string) { c.VPN.Password = v }),
-		s.createCustomTextBoxItem("2FA", fallback(client.VPN.TwoFATokenApp), false, false, false, index, func(c *Client, v string) { c.VPN.TwoFATokenApp = v }),
-		s.createCustomTextBoxItem("Not", fallback(client.VPN.Notes), false, true, false, index, func(c *Client, v string) { c.VPN.Notes = v }),
+		s.createCustomTextBoxItem("User", fallback(client.VPN.User), false, false, false, index, func(c *Client, v string) { c.VPN.User = v }),
+		s.createCustomTextBoxItem("Password", fallback(client.VPN.Password), true, false, false, index, func(c *Client, v string) { c.VPN.Password = v }),
+		s.createCustomTextBoxItem("2FA Auth", fallback(client.VPN.TwoFATokenApp), false, false, false, index, func(c *Client, v string) { c.VPN.TwoFATokenApp = v }),
+		s.createCustomTextBoxItem("Note", fallback(client.VPN.Notes), false, true, false, index, func(c *Client, v string) { c.VPN.Notes = v }),
 	)
 	tabs.Append(container.NewTabItem(TabNameVPN, wrapWithBlueBackground(vpnForm)))
 
@@ -414,8 +413,8 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 		s.createCustomTextBoxItem("Jira URI", fallback(client.Data.JiraURI), false, false, true, index, func(c *Client, v string) { c.Data.JiraURI = v }),
 		s.createCustomTextBoxItem("Jira User", fallback(client.Data.JiraUser), false, false, false, index, func(c *Client, v string) { c.Data.JiraUser = v }),
 		s.createCustomTextBoxItem("Jira Pass", fallback(client.Data.JiraPassword), true, false, false, index, func(c *Client, v string) { c.Data.JiraPassword = v }),
-		s.createCustomTextBoxItem("Kullanıcı", fallback(client.Data.User), false, false, false, index, func(c *Client, v string) { c.Data.User = v }),
-		s.createCustomTextBoxItem("Pass Reset", fallback(client.Data.PasswordReset), false, false, false, index, func(c *Client, v string) { c.Data.PasswordReset = v }),
+		s.createCustomTextBoxItem("User", fallback(client.Data.User), false, false, false, index, func(c *Client, v string) { c.Data.User = v }),
+		s.createCustomTextBoxItem("Pass Reset Info", fallback(client.Data.PasswordReset), false, false, false, index, func(c *Client, v string) { c.Data.PasswordReset = v }),
 	)
 
 	// RDC - Custom Expandable Item
@@ -430,7 +429,7 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 			return s.window
 		})
 
-		rdcBadge := newBadge(fmt.Sprintf("%d", len(client.Data.RDC)), color.RGBA{59, 130, 246, 255})
+		rdcBadge := newBadge(fmt.Sprintf("%d", len(client.Data.RDC)), colorBadgeBlue)
 		rdcHeader := newAccordionHeader("RDC", rdcBadge, []fyne.CanvasObject{}, nil)
 		rdcItem := newExpandableItem(rdcHeader, rdcTextBox)
 		rdcContainer.Add(rdcItem)
@@ -448,7 +447,7 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 			return s.window
 		})
 
-		hostsBadge := newBadge(fmt.Sprintf("%d", len(client.Data.Hosts)), color.RGBA{59, 130, 246, 255})
+		hostsBadge := newBadge(fmt.Sprintf("%d", len(client.Data.Hosts)), colorBadgeBlue)
 		hostsHeader := newAccordionHeader("Hosts", hostsBadge, []fyne.CanvasObject{}, nil)
 		hostsItem := newExpandableItem(hostsHeader, hostsTextBox)
 		hostsContainer.Add(hostsItem)
@@ -463,136 +462,136 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 	tabs.Append(container.NewTabItem(TabNameSystem, wrapWithBlueBackground(sistemContent)))
 
 	// Apps - Custom Expandable Items
-	if len(client.Apps) > 0 {
-		appsContainer := container.NewVBox()
-		for appIdx, app := range client.Apps {
-			idx := appIdx // Capture the index value to avoid closure issues
-			appTypeOptions := []string{"DEV", "TEST", "UAT", "PREP", "PROD"}
-			appForm := widget.NewForm(
-				s.createCustomComboBoxItem("Tip", fallback(app.Type), appTypeOptions, index, func(c *Client, v string) { c.Apps[idx].Type = v }),
-				s.createCustomTextBoxItem("İsim", fallback(app.Name), false, false, false, index, func(c *Client, v string) { c.Apps[idx].Name = v }),
-				s.createCustomTextBoxItem("User", fallback(app.User), false, false, false, index, func(c *Client, v string) { c.Apps[idx].User = v }),
-				s.createCustomTextBoxItem("Pass", fallback(app.Password), true, false, false, index, func(c *Client, v string) { c.Apps[idx].Password = v }),
-				s.createCustomTextBoxItem("DB IP", fallback(app.DBServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v }),
-				s.createCustomTextBoxItem("TNS", fallback(app.TNS), false, false, false, index, func(c *Client, v string) { c.Apps[idx].TNS = v }),
-				s.createCustomTextBoxItem("App IP", fallback(app.AppServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v }),
-				s.createCustomTextBoxItem("App URI", fallback(app.AppServerURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v }),
-				s.createCustomTextBoxItem("App User", fallback(app.AppServerUser), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v }),
-				s.createCustomTextBoxItem("App Pass", fallback(app.AppServerPass), true, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v }),
-				s.createCustomTextBoxItem("SSH Params", fallback(app.SSHParams), false, false, false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v }),
-				s.createCustomTextBoxItem("URI", fallback(app.AppURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppURI = v }),
-			)
+	//if len(client.Apps) > 0 {
+	appsContainer := container.NewVBox()
+	for appIdx, app := range client.Apps {
+		idx := appIdx // Capture the index value to avoid closure issues
+		appTypeOptions := []string{"DEV", "TEST", "UAT", "PREP", "PROD"}
+		appForm := widget.NewForm(
+			s.createCustomComboBoxItem("Env Type", fallback(app.Type), appTypeOptions, index, func(c *Client, v string) { c.Apps[idx].Type = v }),
+			s.createCustomTextBoxItem("Env Name", fallback(app.Name), false, false, false, index, func(c *Client, v string) { c.Apps[idx].Name = v }),
+			s.createCustomTextBoxItem("DB User", fallback(app.User), false, false, false, index, func(c *Client, v string) { c.Apps[idx].User = v }),
+			s.createCustomTextBoxItem("DB Pass", fallback(app.Password), true, false, false, index, func(c *Client, v string) { c.Apps[idx].Password = v }),
+			s.createCustomTextBoxItem("DB IP", fallback(app.DBServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v }),
+			s.createCustomTextBoxItem("TNS", fallback(app.TNS), false, false, false, index, func(c *Client, v string) { c.Apps[idx].TNS = v }),
+			s.createCustomTextBoxItem("Server IP", fallback(app.AppServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v }),
+			s.createCustomTextBoxItem("Server URI", fallback(app.AppServerURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v }),
+			s.createCustomTextBoxItem("Server User", fallback(app.AppServerUser), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v }),
+			s.createCustomTextBoxItem("Server Pass", fallback(app.AppServerPass), true, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v }),
+			s.createCustomTextBoxItem("SSH Params", fallback(app.SSHParams), false, false, false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v }),
+			s.createCustomTextBoxItem("App Link", fallback(app.AppURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppURI = v }),
+		)
 
-			// App Users - Custom Expandable Item
-			usersWidget := s.createAppUsersWidget(app.AppUsers, client.Company, appIdx)
-			// Düzenle butonu - IconButton ile oluştur
-			currentUsersWidget := usersWidget
-			editBtn := NewIconButtonSimple(theme.DocumentCreateIcon(), "Düzenle", fyne.NewSize(18, 18), "Düzenle - Kullanıcı adı ve şifreleri düzenle", func() {
-				// Doğrudan startEdit çağır
-				currentUsersWidget.startEdit()
-			})
+		// App Users - Custom Expandable Item
+		usersWidget := s.createAppUsersWidget(app.AppUsers, client.Company, appIdx)
+		// Düzenle butonu - IconButton ile oluştur
+		currentUsersWidget := usersWidget
+		editBtn := NewIconButtonSimple(theme.DocumentCreateIcon(), "Düzenle", fyne.NewSize(18, 18), "Düzenle - Kullanıcı adı ve şifreleri düzenle", func() {
+			// Doğrudan startEdit çağır
+			currentUsersWidget.startEdit()
+		})
 
-			// AppUsers için badge ve header
-			usersBadge := newBadge(fmt.Sprintf("%d", len(app.AppUsers)), color.RGBA{59, 130, 246, 255})
-			usersHeader := newAccordionHeader("", usersBadge, []fyne.CanvasObject{editBtn}, nil)
-			usersItem := newExpandableItem(usersHeader, usersWidget)
+		// AppUsers için badge ve header
+		usersBadge := newBadge(fmt.Sprintf("%d", len(app.AppUsers)), colorBadgeBlue)
+		usersHeader := newAccordionHeader("", usersBadge, []fyne.CanvasObject{editBtn}, nil)
+		usersItem := newExpandableItem(usersHeader, usersWidget)
 
-			appForm.Append(FormLabelAppUsers, usersItem)
+		appForm.Append(FormLabelAppUsers, usersItem)
 
-			// Silme butonu - IconButton ile oluştur
-			deleteIcon := NewIconButtonSimple(
-				theme.DeleteIcon(),
+		// Silme butonu - IconButton ile oluştur
+		deleteIcon := NewIconButtonSimple(
+			theme.DeleteIcon(),
+			"",
+			fyne.NewSize(18, 18),
+			"Sil - Bu ortamı ve tüm verilerini kalıcı olarak sil",
+			func() {
+				s.deleteApp(index, idx)
+			},
+		)
+
+		// Ortam başlık metni
+		appTitleText := fmt.Sprintf("%s - %s", fallback(app.Type), fallback(app.Name))
+
+		// Badge yok şimdilik, istenirse eklenebilir
+		// SSH Shell butonu - IP ve User varsa ekle
+		headerButtons := []fyne.CanvasObject{}
+		if fallback(app.AppServerIP) != "—" && fallback(app.AppServerUser) != "—" {
+			sshBtn := NewIconButtonSimple(
+				theme.ComputerIcon(),
 				"",
 				fyne.NewSize(18, 18),
-				"Sil - Bu ortamı ve tüm verilerini kalıcı olarak sil",
+				"SSH - Sunucuya SSH bağlantısı aç",
 				func() {
-					s.deleteApp(index, idx)
+					// AppIndex'den doğru app'i al
+					if idx < len(s.clients[index].Apps) {
+						s.openSSHShell(s.clients[index].Apps[idx])
+					}
 				},
 			)
+			headerButtons = append(headerButtons, sshBtn)
+		}
 
-			// Ortam başlık metni
-			appTitleText := fmt.Sprintf("%s - %s", fallback(app.Type), fallback(app.Name))
+		// Silme butonu
+		headerButtons = append(headerButtons, deleteIcon)
 
-			// Badge yok şimdilik, istenirse eklenebilir
-			// SSH Shell butonu - IP ve User varsa ekle
-			headerButtons := []fyne.CanvasObject{}
-			if fallback(app.AppServerIP) != "—" && fallback(app.AppServerUser) != "—" {
-				sshBtn := NewIconButtonSimple(
-					theme.ComputerIcon(),
-					"",
-					fyne.NewSize(18, 18),
-					"SSH - Sunucuya SSH bağlantısı aç",
-					func() {
-						// AppIndex'den doğru app'i al
-						if idx < len(s.clients[index].Apps) {
-							s.openSSHShell(s.clients[index].Apps[idx])
-						}
-					},
-				)
-				headerButtons = append(headerButtons, sshBtn)
+		// Custom accordion header oluştur
+		header := newAccordionHeader(
+			appTitleText,
+			nil,           // Badge yok
+			headerButtons, // SSH butonu + Silme butonu
+			nil,           // onTap daha sonra expandableItem tarafından set edilecek
+		)
+
+		// Ortam tipine göre border rengi al
+		borderColor := getAppTypeBorderColor(app.Type)
+
+		// Form'u önce border ile sarmala, sonra background ekle
+		borderedForm := newBorderedContainer(appForm, borderColor, 5)
+		contentWithBg := wrapWithBlueBackground(borderedForm)
+
+		// Expandable item oluştur
+		expandableApp := newExpandableItem(header, contentWithBg)
+
+		// Önceki expand durumunu geri yükle
+		if s.expandedApps[client.Company] == nil {
+			s.expandedApps[client.Company] = make(map[int]bool)
+		}
+		if s.expandedApps[client.Company][appIdx] {
+			expandableApp.SetExpanded(true)
+		}
+
+		// Expand durumu değiştiğinde kaydet
+		originalOnTap := header.onTap
+		header.onTap = func() {
+			if originalOnTap != nil {
+				originalOnTap()
 			}
-
-			// Silme butonu
-			headerButtons = append(headerButtons, deleteIcon)
-
-			// Custom accordion header oluştur
-			header := newAccordionHeader(
-				appTitleText,
-				nil,           // Badge yok
-				headerButtons, // SSH butonu + Silme butonu
-				nil,           // onTap daha sonra expandableItem tarafından set edilecek
-			)
-
-			// Ortam tipine göre border rengi al
-			borderColor := getAppTypeBorderColor(app.Type)
-
-			// Form'u önce border ile sarmala, sonra background ekle
-			borderedForm := newBorderedContainer(appForm, borderColor, 5)
-			contentWithBg := wrapWithBlueBackground(borderedForm)
-
-			// Expandable item oluştur
-			expandableApp := newExpandableItem(header, contentWithBg)
-
-			// Önceki expand durumunu geri yükle
+			// Durumu kaydet
 			if s.expandedApps[client.Company] == nil {
 				s.expandedApps[client.Company] = make(map[int]bool)
 			}
-			if s.expandedApps[client.Company][appIdx] {
-				expandableApp.SetExpanded(true)
-			}
-
-			// Expand durumu değiştiğinde kaydet
-			originalOnTap := header.onTap
-			header.onTap = func() {
-				if originalOnTap != nil {
-					originalOnTap()
-				}
-				// Durumu kaydet
-				if s.expandedApps[client.Company] == nil {
-					s.expandedApps[client.Company] = make(map[int]bool)
-				}
-				s.expandedApps[client.Company][idx] = expandableApp.IsExpanded()
-			}
-
-			// Container'a ekle - MaxLayout ile tam genişlik
-			appsContainer.Add(container.NewMax(expandableApp))
-			appsContainer.Add(widget.NewSeparator())
+			s.expandedApps[client.Company][idx] = expandableApp.IsExpanded()
 		}
 
-		// Yeni ortam ekleme düğmesi - IconButton ile
-		addAppBtn := NewIconButtonSimple(theme.ContentAddIcon(), "Yeni Ortam", fyne.NewSize(24, 24), "Yeni Ortam - Firma altına yeni ortam (dev, test, prod vb.) ekle", func() {
-			s.addApp(index)
-		})
-
-		// Container ve butonı container'a koy
-		appsWithButton := container.NewBorder(
-			addAppBtn, // Top'ta buton
-			nil, nil, nil,
-			appsContainer, // Content
-		)
-
-		tabs.Append(container.NewTabItem(TabNameEnvironments, wrapWithBlueBackground(appsWithButton)))
+		// Container'a ekle - MaxLayout ile tam genişlik
+		appsContainer.Add(container.NewMax(expandableApp))
+		appsContainer.Add(widget.NewSeparator())
 	}
+
+	// Yeni ortam ekleme düğmesi - IconButton ile
+	addAppBtn := NewIconButtonSimple(theme.ContentAddIcon(), "New App Env", fyne.NewSize(24, 24), "New App Env - Add a new environment (dev, test, prod, etc.) under the customer", func() {
+		s.addApp(index)
+	})
+
+	// Container ve butonı container'a koy
+	appsWithButton := container.NewBorder(
+		addAppBtn, // Top'ta buton
+		nil, nil, nil,
+		appsContainer, // Content
+	)
+
+	tabs.Append(container.NewTabItem(TabNameEnvironments, wrapWithBlueBackground(appsWithButton)))
+	//}
 
 	// Önceki aktif tab'ı geri yükle
 	if savedTabIndex, ok := s.activeTabIndex[client.Company]; ok {
@@ -612,11 +611,10 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 		}
 	}
 
-	// Tabs'ı kahverengi arka plan ile wrap et
-	brownBg := canvas.NewRectangle(colorDarkcyan)
-	tabsWithBg := container.NewStack(brownBg, tabs)
+	//tabBg := canvas.NewRectangle(colorTabBG)
+	//tabsWithBg := container.NewStack(tabBg, tabs)
 
-	return tabsWithBg
+	return tabs // tabsWithBg
 }
 
 // fallback boş string için varsayılan değer döndürür

@@ -5,3 +5,6 @@ client_info.json.backup
 client_info.json
 client_info.json~
 client_info copy.json
+internal.exe
+build.ps1
+FALSE_POSITIVE.md

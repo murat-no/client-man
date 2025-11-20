@@ -23,6 +23,8 @@ type CustomTextBox struct {
 	readOnly    bool
 	hidden      bool
 
+	originalText string // Edit moduna girerken orijinal değeri sakla
+
 	onSave   func(string)
 	onWindow func() fyne.Window
 
@@ -93,6 +95,8 @@ func (ctb *CustomTextBox) DoubleTapped(_ *fyne.PointEvent) {
 		return
 	}
 
+	// Edit moduna geçmeden önce orijinal değeri sakla
+	ctb.originalText = ctb.text
 	ctb.readOnly = false
 	ctb.hidden = false
 	if ctb.editEntry != nil {
@@ -244,7 +248,8 @@ func (r *customTextBoxRenderer) buildEditUI() {
 	}
 
 	r.textBox.editEntry.SetText(r.textBox.text)
-	r.textBox.editEntry.Password = r.textBox.isPassword
+	// Edit modunda şifreleri açık göster
+	r.textBox.editEntry.Password = false
 
 	saveBtn := widget.NewButtonWithIcon("", theme.ConfirmIcon(), func() {
 		r.saveEdit()
@@ -256,7 +261,23 @@ func (r *customTextBoxRenderer) buildEditUI() {
 	})
 	cancelBtn.Importance = widget.LowImportance
 
-	buttonBar := container.NewHBox(saveBtn, cancelBtn)
+	buttons := []fyne.CanvasObject{saveBtn, cancelBtn}
+
+	// Şifre alanı ise şifre oluşturucu düğmesi ekle
+	if r.textBox.isPassword {
+		generateBtn := NewIconButtonSimple(
+			theme.ViewRefreshIcon(),
+			"",
+			fyne.NewSize(24, 24),
+			"Güçlü şifre oluştur",
+			func() {
+				r.generatePassword()
+			},
+		)
+		buttons = append([]fyne.CanvasObject{generateBtn}, buttons...)
+	}
+
+	buttonBar := container.NewHBox(buttons...)
 	r.editContainer = container.NewBorder(nil, nil, nil, buttonBar, r.textBox.editEntry)
 }
 
@@ -277,6 +298,8 @@ func (r *customTextBoxRenderer) saveEdit() {
 }
 
 func (r *customTextBoxRenderer) cancelEdit() {
+	// Orijinal değere geri dön
+	r.textBox.text = r.textBox.originalText
 	r.textBox.readOnly = true
 	r.textBox.hidden = r.textBox.isPassword
 	if r.textBox.editEntry != nil {
@@ -284,6 +307,20 @@ func (r *customTextBoxRenderer) cancelEdit() {
 	}
 	r.textBox.displayLabel.SetText(r.textBox.getDisplayText())
 	r.textBox.BaseWidget.Refresh()
+}
+
+func (r *customTextBoxRenderer) generatePassword() {
+	// Şifre oluştur
+	config := DefaultPasswordConfig()
+	password, err := GeneratePassword(config)
+	if err != nil {
+		return
+	}
+
+	// Entry'ye şifreyi yaz
+	if r.textBox.editEntry != nil {
+		r.textBox.editEntry.SetText(password)
+	}
 }
 
 func (r *customTextBoxRenderer) updateEyeIcon() {
