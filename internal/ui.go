@@ -467,36 +467,69 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 	for appIdx, app := range client.Apps {
 		idx := appIdx // Capture the index value to avoid closure issues
 		appTypeOptions := []string{"DEV", "TEST", "UAT", "PREP", "PROD"}
-		appForm := widget.NewForm(
+
+		// Genel bilgiler grubu
+		generalForm := widget.NewForm(
 			s.createCustomComboBoxItem("Env Type", fallback(app.Type), appTypeOptions, index, func(c *Client, v string) { c.Apps[idx].Type = v }),
 			s.createCustomTextBoxItem("Env Name", fallback(app.Name), false, false, false, index, func(c *Client, v string) { c.Apps[idx].Name = v }),
-			s.createCustomTextBoxItem("DB User", fallback(app.User), false, false, false, index, func(c *Client, v string) { c.Apps[idx].User = v }),
-			s.createCustomTextBoxItem("DB Pass", fallback(app.Password), true, false, false, index, func(c *Client, v string) { c.Apps[idx].Password = v }),
-			s.createCustomTextBoxItem("DB IP", fallback(app.DBServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v }),
-			s.createCustomTextBoxItem("TNS", fallback(app.TNS), false, false, false, index, func(c *Client, v string) { c.Apps[idx].TNS = v }),
-			s.createCustomTextBoxItem("Server IP", fallback(app.AppServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v }),
-			s.createCustomTextBoxItem("Server URI", fallback(app.AppServerURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v }),
-			s.createCustomTextBoxItem("Server User", fallback(app.AppServerUser), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v }),
-			s.createCustomTextBoxItem("Server Pass", fallback(app.AppServerPass), true, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v }),
-			s.createCustomTextBoxItem("SSH Params", fallback(app.SSHParams), false, false, false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v }),
 			s.createCustomTextBoxItem("App Link", fallback(app.AppURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppURI = v }),
 		)
 
-		// App Users - Custom Expandable Item
+		// App Users için expandable item oluştur
 		usersWidget := s.createAppUsersWidget(app.AppUsers, client.Company, appIdx)
-		// Düzenle butonu - IconButton ile oluştur
 		currentUsersWidget := usersWidget
 		editBtn := NewIconButtonSimple(theme.DocumentCreateIcon(), "Düzenle", fyne.NewSize(18, 18), "Düzenle - Kullanıcı adı ve şifreleri düzenle", func() {
-			// Doğrudan startEdit çağır
 			currentUsersWidget.startEdit()
 		})
-
-		// AppUsers için badge ve header
 		usersBadge := newBadge(fmt.Sprintf("%d", len(app.AppUsers)), colorBadgeBlue)
 		usersHeader := newAccordionHeader("", usersBadge, []fyne.CanvasObject{editBtn}, nil)
 		usersItem := newExpandableItem(usersHeader, usersWidget)
 
-		appForm.Append(FormLabelAppUsers, usersItem)
+		generalForm.Append(FormLabelAppUsers, usersItem)
+
+		// Başlık ve çizgi
+		generalTitle := widget.NewLabel("General")
+		generalTitle.TextStyle = fyne.TextStyle{Bold: true}
+		generalLine := widget.NewSeparator()
+		generalWithHeader := container.NewVBox(generalTitle, generalLine, generalForm)
+		generalCard := widget.NewCard("", "", generalWithHeader)
+
+		// Database grubu
+		dbForm := widget.NewForm(
+			s.createCustomTextBoxItem("DB User", fallback(app.User), false, false, false, index, func(c *Client, v string) { c.Apps[idx].User = v }),
+			s.createCustomTextBoxItem("DB Pass", fallback(app.Password), true, false, false, index, func(c *Client, v string) { c.Apps[idx].Password = v }),
+			s.createCustomTextBoxItem("DB IP", fallback(app.DBServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].DBServerIP = v }),
+			s.createCustomTextBoxItem("TNS", fallback(app.TNS), false, false, false, index, func(c *Client, v string) { c.Apps[idx].TNS = v }),
+		)
+		// Başlık ve çizgi
+		dbTitle := widget.NewLabel("Database")
+		dbTitle.TextStyle = fyne.TextStyle{Bold: true}
+		dbLine := widget.NewSeparator()
+		dbWithHeader := container.NewVBox(dbTitle, dbLine, dbForm)
+		dbCard := widget.NewCard("", "", dbWithHeader)
+
+		// App Server grubu
+		appServerForm := widget.NewForm(
+			s.createCustomTextBoxItem("Server IP", fallback(app.AppServerIP), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerIP = v }),
+			s.createCustomTextBoxItem("Server URI", fallback(app.AppServerURI), false, false, true, index, func(c *Client, v string) { c.Apps[idx].AppServerURI = v }),
+			s.createCustomTextBoxItem("Server User", fallback(app.AppServerUser), false, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerUser = v }),
+			s.createCustomTextBoxItem("Server Pass", fallback(app.AppServerPass), true, false, false, index, func(c *Client, v string) { c.Apps[idx].AppServerPass = v }),
+			s.createCustomTextBoxItem("Weblogic Pass", fallback(app.WeblogicPass), true, false, false, index, func(c *Client, v string) { c.Apps[idx].WeblogicPass = v }),
+			s.createCustomTextBoxItem("SSH Params", fallback(app.SSHParams), false, false, false, index, func(c *Client, v string) { c.Apps[idx].SSHParams = v }),
+		)
+		// Başlık ve çizgi
+		appServerTitle := widget.NewLabel("App Server")
+		appServerTitle.TextStyle = fyne.TextStyle{Bold: true}
+		appServerLine := widget.NewSeparator()
+		appServerWithHeader := container.NewVBox(appServerTitle, appServerLine, appServerForm)
+		appServerCard := widget.NewCard("", "", appServerWithHeader)
+
+		// Tüm kartları birleştir
+		allForms := container.NewVBox(
+			generalCard,
+			appServerCard,
+			dbCard,
+		)
 
 		// Silme butonu - IconButton ile oluştur
 		deleteIcon := NewIconButtonSimple(
@@ -546,7 +579,7 @@ func (s *AppState) createClientDetails(client Client, index int) fyne.CanvasObje
 		borderColor := getAppTypeBorderColor(app.Type)
 
 		// Form'u önce border ile sarmala, sonra background ekle
-		borderedForm := newBorderedContainer(appForm, borderColor, 5)
+		borderedForm := newBorderedContainer(allForms, borderColor, 5)
 		contentWithBg := wrapWithBlueBackground(borderedForm)
 
 		// Expandable item oluştur

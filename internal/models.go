@@ -34,6 +34,7 @@ type AppInfo struct {
 	AppServerURI  string   `json:"app_server_uri"`
 	AppServerUser string   `json:"app_server_user"`
 	AppServerPass string   `json:"app_server_pass"`
+	WeblogicPass  string   `json:"weblogic_pass"`
 	AppURI        string   `json:"app_uri"`
 	AppUsers      []string `json:"app_users"`
 	SSHParams     string   `json:"ssh_params"`

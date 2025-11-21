@@ -34,6 +34,9 @@ var (
 	// Badge renkleri
 	colorBadgeGreen = color.NRGBA{R: 34, G: 197, B: 94, A: 255}  // Yeşil - VPN gibi durumlar için
 	colorBadgeBlue  = color.NRGBA{R: 59, G: 130, B: 246, A: 255} // Mavi - EBS versiyonu, RDC/Host sayısı gibi bilgilendirme için
+
+	// Separator ve border renkleri
+	colorSeparator = color.NRGBA{R: 117, G: 140, B: 163, A: 255} // #758CA3 - Başlık altı çizgi ve çerçeve rengi
 )
 
 // getAppTypeBorderColor ortam tipine göre çerçeve rengini döndürür
@@ -75,6 +78,10 @@ func (t *blueTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) c
 		return color.White // Yazı rengi
 	case theme.ColorNamePrimary:
 		return colorDarkGray
+	case theme.ColorNameSeparator:
+		return colorSeparator // Separator rengi #758CA3
+	case theme.ColorNameShadow:
+		return colorSeparator // Card kenarlık rengi #758CA3
 	case theme.ColorNameHover:
 		return colorDarkcyan // Hover rengi - açık kahverengi
 	case theme.ColorNamePressed:

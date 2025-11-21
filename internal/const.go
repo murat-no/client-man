@@ -15,7 +15,7 @@ const (
 
 	// UI
 	DefaultTabMinHeight = 300
-	TabContentMaxWidth  = 400 // Tab içeriği maksimum genişlik
+	TabContentMaxWidth  = 800 // Tab içeriği maksimum genişlik
 
 	// Dialog Titles
 	DialogTitleSuccess       = "Success"

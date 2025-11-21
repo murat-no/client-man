@@ -49,6 +49,8 @@ func NewCustomTextBox(text string, isPassword bool, isMultiLine bool, isURL bool
 	ctb.displayLabel = widget.NewLabel(ctb.getDisplayText())
 	if isMultiLine {
 		ctb.displayLabel.Wrapping = fyne.TextWrapWord
+	} else {
+		ctb.displayLabel.Truncation = fyne.TextTruncateEllipsis
 	}
 
 	ctb.ExtendBaseWidget(ctb)
@@ -67,13 +69,6 @@ func (ctb *CustomTextBox) getDisplayText() string {
 			return ""
 		}
 		return strings.Repeat("•", runeCount)
-	}
-
-	if ctb.readOnly && !ctb.isMultiLine {
-		runes := []rune(text)
-		if len(runes) > ctb.maxDisplayLen {
-			return string(runes[:ctb.maxDisplayLen]) + "…"
-		}
 	}
 
 	return text
@@ -115,17 +110,6 @@ func (ctb *CustomTextBox) DoubleTapped(_ *fyne.PointEvent) {
 	})
 }
 
-func (ctb *CustomTextBox) Tapped(_ *fyne.PointEvent) {
-	// URL ise ve readonly modda ise tarayıcıda aç
-	if ctb.isURL && ctb.readOnly && strings.TrimSpace(ctb.text) != "" && ctb.text != "—" {
-		if parsedURL := parseURLString(ctb.text); parsedURL != nil {
-			if err := fyne.CurrentApp().OpenURL(parsedURL); err != nil {
-				// Hata durumunda sessizce devam et
-			}
-		}
-	}
-}
-
 // parseURLString string'i *url.URL'ye çevirir
 func parseURLString(urlStr string) *url.URL {
 	// Eğer protocol yoksa http:// ekle
@@ -144,24 +128,27 @@ type customTextBoxRenderer struct {
 	readOnlyContainer *fyne.Container
 	editContainer     *fyne.Container
 
-	copyButton *IconButton
-	eyeButton  *IconButton
-	hyperlink  *widget.Hyperlink
-	copyIcon   fyne.Resource
-	copiedIcon fyne.Resource
-	eyeIcon    fyne.Resource
-	hiddenIcon fyne.Resource
-	buttonSize fyne.Size
+	copyButton    *IconButton
+	eyeButton     *IconButton
+	hyperlink     *widget.Hyperlink
+	browserButton *IconButton
+	copyIcon      fyne.Resource
+	copiedIcon    fyne.Resource
+	eyeIcon       fyne.Resource
+	hiddenIcon    fyne.Resource
+	browserIcon   fyne.Resource
+	buttonSize    fyne.Size
 }
 
 func newCustomTextBoxRenderer(textBox *CustomTextBox) *customTextBoxRenderer {
 	r := &customTextBoxRenderer{
-		textBox:    textBox,
-		copyIcon:   loadIconResource("copy", theme.ContentCopyIcon()),
-		copiedIcon: loadIconResource("check", theme.ConfirmIcon()),
-		eyeIcon:    loadIconResource("eye", theme.VisibilityIcon()),
-		hiddenIcon: loadIconResource("hidden", theme.VisibilityOffIcon()),
-		buttonSize: fyne.NewSize(18, 18),
+		textBox:     textBox,
+		copyIcon:    loadIconResource("copy", theme.ContentCopyIcon()),
+		copiedIcon:  loadIconResource("check", theme.ConfirmIcon()),
+		eyeIcon:     loadIconResource("eye", theme.VisibilityIcon()),
+		hiddenIcon:  loadIconResource("hidden", theme.VisibilityOffIcon()),
+		browserIcon: loadIconResource("chrome", theme.ComputerIcon()),
+		buttonSize:  fyne.NewSize(18, 18),
 	}
 
 	r.buildReadOnlyUI()
@@ -172,13 +159,6 @@ func newCustomTextBoxRenderer(textBox *CustomTextBox) *customTextBoxRenderer {
 
 func (r *customTextBoxRenderer) buildReadOnlyUI() {
 	r.textBox.displayLabel.SetText(r.textBox.getDisplayText())
-
-	// URL için hyperlink widget'i oluştur
-	if r.textBox.isURL && r.textBox.text != "" && r.textBox.text != "—" {
-		if parsedURL := parseURLString(r.textBox.text); parsedURL != nil {
-			r.hyperlink = widget.NewHyperlink(r.textBox.text, parsedURL)
-		}
-	}
 
 	r.copyButton = NewIconButtonSimple(
 		r.copyIcon,
@@ -205,6 +185,22 @@ func (r *customTextBoxRenderer) buildReadOnlyUI() {
 
 	buttonObjects := []fyne.CanvasObject{r.copyButton}
 
+	// URL alanı ise browser düğmesi ekle
+	if r.textBox.isURL && r.textBox.text != "" && r.textBox.text != "—" {
+		r.browserButton = NewIconButtonSimple(
+			r.browserIcon,
+			"",
+			r.buttonSize,
+			"Tarayıcıda aç",
+			func() {
+				if parsedURL := parseURLString(r.textBox.text); parsedURL != nil {
+					fyne.CurrentApp().OpenURL(parsedURL)
+				}
+			},
+		)
+		buttonObjects = append([]fyne.CanvasObject{r.browserButton}, buttonObjects...)
+	}
+
 	if r.textBox.isPassword {
 		r.eyeButton = NewIconButtonSimple(
 			r.eyeIcon,
@@ -223,15 +219,7 @@ func (r *customTextBoxRenderer) buildReadOnlyUI() {
 
 	buttons := container.NewHBox(buttonObjects...)
 
-	// URL ise hyperlink kullan, değilse normal label
-	var displayWidget fyne.CanvasObject
-	if r.hyperlink != nil {
-		displayWidget = r.hyperlink
-	} else {
-		displayWidget = r.textBox.displayLabel
-	}
-
-	r.readOnlyContainer = container.NewBorder(nil, nil, nil, buttons, displayWidget)
+	r.readOnlyContainer = container.NewBorder(nil, nil, nil, buttons, r.textBox.displayLabel)
 }
 
 func (r *customTextBoxRenderer) buildEditUI() {
@@ -356,6 +344,12 @@ func (r *customTextBoxRenderer) MinSize() fyne.Size {
 	width := ro.Width
 	if ed.Width > width {
 		width = ed.Width
+	}
+
+	// Maksimum genişliği sınırla (TabContentMaxWidth - padding)
+	maxWidth := float32(TabContentMaxWidth - 100)
+	if width > maxWidth {
+		width = maxWidth
 	}
 
 	height := ro.Height
